@@ -1,0 +1,1470 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>維也納樂章 RPG — 療癒系音樂冒險</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:"Georgia","Noto Serif TC",serif;
+    background:#3f3225; color:#4a3728; min-height:100vh;
+  }
+  .wrap { max-width:980px; margin:0 auto; padding:10px; }
+
+  header {
+    background:linear-gradient(135deg,#7a5230,#9c7148);
+    color:#fdf6e8; border-radius:12px; padding:10px 14px;
+    box-shadow:0 4px 12px rgba(0,0,0,.3); margin-bottom:10px;
+  }
+  header h1 { font-size:1.1rem; letter-spacing:2px; display:inline-block; }
+  header .sub { font-size:.72rem; opacity:.85; }
+  .stats { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .stat {
+    background:rgba(255,250,240,.15); border:1px solid rgba(255,250,240,.3);
+    border-radius:20px; padding:3px 10px; font-size:.78rem; white-space:nowrap;
+  }
+  .energybar { height:6px; background:rgba(0,0,0,.25); border-radius:3px; overflow:hidden; margin-top:6px; }
+  .energybar>div { height:100%; background:linear-gradient(90deg,#ffd97a,#ff9d5c); transition:width .4s; }
+
+  .quest {
+    background:#fdf3dd; border-left:4px solid #c98f3d; border-radius:8px;
+    padding:8px 12px; font-size:.8rem; margin-bottom:10px;
+    display:flex; flex-wrap:wrap; align-items:center; gap:6px;
+  }
+  .quest b { color:#a06a1f; }
+  .pages { letter-spacing:3px; }
+  .storybtn {
+    margin-left:auto; font-family:inherit; font-size:.74rem;
+    background:#efeaf9; color:#6a5a98; border:1.5px solid #b8a8d8;
+    border-radius:20px; padding:4px 12px; cursor:pointer; white-space:nowrap;
+  }
+  .storybtn:hover { background:#e2d8f5; }
+
+  .gamebox { position:relative; border-radius:12px; overflow:hidden; box-shadow:0 6px 20px rgba(0,0,0,.4); }
+  canvas { display:block; width:100%; height:auto; touch-action:none; cursor:pointer; background:#87a96b; }
+  .hint {
+    position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+    background:rgba(50,35,20,.75); color:#ffe9c4; font-size:.75rem;
+    padding:5px 14px; border-radius:20px; pointer-events:none; white-space:nowrap;
+  }
+
+  .log {
+    margin-top:10px; background:#f5ecd9; border-radius:12px; padding:10px 12px;
+    max-height:130px; overflow-y:auto; font-size:.8rem; line-height:1.7;
+    border:1px solid #e0cba0;
+  }
+  .log p { border-bottom:1px dotted #d9c49a; padding:2px 0; }
+  .log p:first-child { color:#7a5230; font-weight:bold; }
+  .muse {
+    font-size:.76rem; color:#7a6ba8; background:#efeaf9; border-radius:10px;
+    padding:7px 10px; margin-top:8px;
+  }
+  .sparkle { animation:tw 1.6s infinite; display:inline-block; }
+  @keyframes tw { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .overlay {
+    position:fixed; inset:0; background:rgba(60,40,20,.55);
+    display:none; align-items:center; justify-content:center; padding:14px; z-index:50;
+  }
+  .overlay.show { display:flex; }
+  .modal {
+    background:#fffaf0; border-radius:16px; max-width:520px; width:100%;
+    padding:20px; box-shadow:0 10px 40px rgba(0,0,0,.35);
+    max-height:85vh; overflow-y:auto;
+  }
+  .modal h3 { color:#6d4c2b; margin-bottom:4px; }
+  .modal .role { font-size:.75rem; color:#a28a68; margin-bottom:10px; }
+  .bubble {
+    background:#f5ecd9; border-radius:12px; padding:10px 12px;
+    font-size:.88rem; line-height:1.75; margin-bottom:10px; white-space:pre-wrap;
+  }
+  .bubble.me { background:#e8ddf5; text-align:right; }
+  .bubble.good { background:#e2f0d9; }
+  .bubble.bad { background:#f5ddd9; }
+  .staffbox {
+    background:#fffdf6; border:1.5px solid #d9bf94; border-radius:12px;
+    padding:6px 10px; margin-bottom:10px; text-align:center;
+  }
+  .staffbox svg { width:100%; max-width:260px; height:auto; }
+  .listenbox {
+    background:#2c2244; border-radius:12px; padding:14px; margin-bottom:10px;
+    text-align:center; color:#ffe9c4;
+  }
+  .listenbox .disc { font-size:2rem; display:inline-block; }
+  .listenbox .disc.playing { animation:spinS 3s linear infinite; }
+  .timebar { height:8px; background:rgba(255,255,255,.15); border-radius:4px; overflow:hidden; margin-top:10px; }
+  .timebar>div { height:100%; background:linear-gradient(90deg,#ffd97a,#ff9d5c); width:0%; transition:width .2s linear; }
+  .timetxt { font-size:.78rem; margin-top:6px; letter-spacing:1px; }
+  .choices { display:flex; flex-direction:column; gap:8px; margin-top:10px; }
+  button {
+    font-family:inherit; background:linear-gradient(135deg,#a97c50,#8a5f36);
+    color:#fdf6e8; border:none; border-radius:10px; padding:9px 14px;
+    font-size:.86rem; cursor:pointer; transition:filter .15s;
+  }
+  button:hover { filter:brightness(1.12); }
+  button.ghost { background:transparent; color:#8a5f36; border:1.5px solid #b98d5e; }
+  .choices button { text-align:left; background:#fdf3dd; color:#5c4326; border:1.5px solid #d9bf94; }
+  .choices button:hover { background:#f7e6c3; }
+  .chatrow { display:flex; gap:8px; margin-top:10px; }
+  .chatrow input {
+    flex:1; font-family:inherit; padding:9px 12px; border-radius:10px;
+    border:1.5px solid #d9bf94; background:#fffdf8; font-size:.86rem;
+  }
+  footer { text-align:center; font-size:.7rem; color:#b09b7d; margin:12px 0 6px; }
+
+  /* ══ 開場故事 ══ */
+  #intro {
+    position:fixed; inset:0; z-index:100;
+    background:radial-gradient(ellipse at center,#4a3a55 0%,#241a2e 70%);
+    display:flex; align-items:center; justify-content:center; padding:16px;
+  }
+  .story {
+    max-width:560px; width:100%; background:rgba(255,250,240,.97);
+    border-radius:18px; padding:22px 26px 24px; box-shadow:0 12px 50px rgba(0,0,0,.5);
+    text-align:center; animation:fadeIn .6s;
+    max-height:92vh; overflow-y:auto; position:relative;
+  }
+  @keyframes fadeIn { from{opacity:0; transform:translateY(14px)} to{opacity:1; transform:none} }
+  .scene-art {
+    width:100%; border-radius:12px; overflow:hidden; margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(60,40,20,.25); line-height:0;
+    animation:fadeIn .8s;
+  }
+  .scene-art svg { width:100%; height:auto; display:block; }
+  .story h2 { color:#6d4c2b; font-size:1.15rem; letter-spacing:2px; margin-bottom:12px; }
+  .story p {
+    font-size:.9rem; line-height:1.9; color:#5c4a35; text-align:left;
+    white-space:pre-wrap; margin-bottom:14px;
+  }
+  .story input {
+    width:100%; max-width:280px; font-family:inherit; font-size:1rem;
+    padding:10px 14px; border-radius:10px; border:2px solid #c9a06a;
+    background:#fffdf8; text-align:center; margin-bottom:14px;
+  }
+  .story .dots { font-size:.8rem; color:#b09b7d; letter-spacing:6px; margin-top:12px; }
+  .skipbtn {
+    position:absolute; top:10px; right:12px; font-size:.72rem;
+    background:transparent; color:#a28a68; border:1.5px solid #d0bc98;
+    border-radius:16px; padding:3px 12px;
+  }
+  .skipbtn:hover { background:#f5ecd9; }
+
+  /* ══ 歡迎彈窗 ══ */
+  #welcome {
+    position:fixed; inset:0; z-index:90;
+    background:rgba(30,20,45,.7);
+    display:none; align-items:center; justify-content:center; padding:16px;
+  }
+  #welcome.show { display:flex; }
+  .welcome-card {
+    max-width:460px; width:100%; background:#fffaf0;
+    border-radius:18px; padding:24px 26px; text-align:center;
+    box-shadow:0 12px 50px rgba(0,0,0,.5);
+    border:3px solid #c9a06a;
+    animation:popIn .5s cubic-bezier(.2,1.4,.4,1);
+  }
+  @keyframes popIn { from{opacity:0; transform:scale(.8)} to{opacity:1; transform:scale(1)} }
+  .welcome-card .wicon { font-size:2.4rem; margin-bottom:6px; animation:floatY 2.4s ease-in-out infinite; display:inline-block; }
+  .welcome-card h2 { color:#6d4c2b; font-size:1.2rem; letter-spacing:2px; margin-bottom:12px; }
+  .welcome-card p {
+    font-size:.92rem; line-height:2; color:#5c4a35; text-align:left;
+    white-space:pre-wrap; margin-bottom:16px;
+    background:#f5ecd9; border-radius:12px; padding:12px 14px;
+  }
+  .welcome-card .hl { color:#a06a1f; font-weight:bold; }
+
+  /* ══ 插圖動畫 ══ */
+  @keyframes glowP { 0%,100%{opacity:.35} 50%{opacity:.9} }
+  .glow { animation:glowP 2s ease-in-out infinite; }
+  @keyframes spinS { from{transform:rotate(0)} to{transform:rotate(360deg)} }
+  .spin  { animation:spinS 9s linear infinite; transform-origin:center; transform-box:fill-box; }
+  .spinR { animation:spinS 14s linear infinite reverse; transform-origin:center; transform-box:fill-box; }
+  @keyframes floatY { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-7px)} }
+  .floaty  { animation:floatY 2.6s ease-in-out infinite; }
+  .floaty2 { animation:floatY 3.4s ease-in-out infinite .6s; }
+  .floaty3 { animation:floatY 2.1s ease-in-out infinite 1.1s; }
+  @keyframes flick { 0%,100%{opacity:1; transform:scaleY(1)} 50%{opacity:.75; transform:scaleY(.85)} }
+  .flame { animation:flick .7s ease-in-out infinite; transform-origin:bottom; transform-box:fill-box; }
+  @keyframes twk { 0%,100%{opacity:1} 50%{opacity:.15} }
+  .star1 { animation:twk 1.5s infinite; } .star2 { animation:twk 2.2s infinite .5s; } .star3 { animation:twk 1.8s infinite 1s; }
+  @keyframes paperF { 0%{transform:translate(0,0) rotate(0)} 25%{transform:translate(8px,-10px) rotate(15deg)} 50%{transform:translate(-4px,-16px) rotate(-10deg)} 75%{transform:translate(10px,-8px) rotate(12deg)} 100%{transform:translate(0,0) rotate(0)} }
+  .paper { animation:paperF 4s ease-in-out infinite; transform-box:fill-box; }
+  .paper2 { animation:paperF 5s ease-in-out infinite 1.2s; transform-box:fill-box; }
+</style>
+</head>
+<body>
+
+<!-- ══════════ 開場故事 ══════════ -->
+<div id="intro">
+  <div class="story" id="storyBox"></div>
+</div>
+
+<!-- ══════════ 歡迎彈窗 ══════════ -->
+<div id="welcome">
+  <div class="welcome-card">
+    <span class="wicon">🎼</span>
+    <h2>歡迎來到 1786 年的維也納!</h2>
+    <p id="welcomeText"></p>
+    <button id="welcomeBtn">🏃 出發!前往 ☕ 中央咖啡館</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <header>
+    <h1>🎼 維也納樂章 RPG</h1> <span class="sub">1786 年,按住滑鼠走遍音樂之都</span>
+    <div class="stats">
+      <span class="stat">🎓 <b id="pname">???</b></span>
+      <span class="stat">📅 第 <b id="day">1</b> 天 · <b id="slot">清晨</b></span>
+      <span class="stat">💰 <b id="gold">20</b> 克朗</span>
+      <span class="stat">⭐ 聲望 <b id="rep">0</b></span>
+      <span class="stat">📖 樂識 <b id="know">0</b></span>
+      <span class="stat">⚡ 體力 <b id="energyNum">50</b>/50</span>
+      <span class="stat" id="odeStat" style="display:none">🎁 持有《快樂頌》樂譜</span>
+    </div>
+    <div class="energybar"><div id="energyBar" style="width:100%"></div></div>
+  </header>
+
+  <div class="quest">
+    <span><b>🎯 主線:失落的《費加洛婚禮》</b> — 找回 5 頁樂譜手稿!
+    已尋回:<span class="pages" id="pages">□ □ □ □ □</span>
+    &nbsp;|&nbsp; ☕ 咖啡館問答:<b id="cafeCount">0</b>/8</span>
+    <button class="storybtn" id="storyBtn">📖 回顧開場故事</button>
+  </div>
+
+  <div class="gamebox">
+    <canvas id="game" width="960" height="620"></canvas>
+    <div class="hint" id="hint">🖱️ 按住滑鼠/手指不放,小音樂家就會朝那裡走去</div>
+  </div>
+
+  <div class="log" id="log"><p>🌅 清晨的維也納,鐘聲迴盪。按住滑鼠,開始你的冒險吧!</p></div>
+  <div class="muse" id="museTip"><span class="sparkle">✨</span> 小繆思:「走到建築物的門前就能進去互動。體力不夠時,回 🏠 工作室睡覺喔~」</div>
+
+  <footer>療癒系古典音樂學習冒險 · RPG 原型 v0.9</footer>
+</div>
+
+<!-- 彈窗 -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="mTitle"></h3>
+    <div class="role" id="mRole"></div>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<script>
+/* ══════════ 遊戲狀態 ══════════ */
+const SLOTS=["清晨","上午","下午","傍晚","夜晚"];
+const MAXE=50;                       /* 體力上限 50 */
+const S={ name:"", day:1, slot:0, energy:MAXE, gold:20, rep:0, know:0,
+  pages:[false,false,false,false,false], ended:false, quizDone:{},
+  cafeCorrect:0, cafeDone:{}, odeScore:false, workIdx:0 };
+let gameStarted=false;
+
+/* ══════════ 開場故事插圖(SVG) ══════════ */
+const ART={
+/* 第 1 幕:香城大學圖書館深夜 */
+lib:`<svg viewBox="0 0 320 175" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="175" fill="#2b2536"/>
+  <rect x="228" y="14" width="76" height="64" rx="4" fill="#37456b"/>
+  <line x1="266" y1="14" x2="266" y2="78" stroke="#22262e" stroke-width="3"/>
+  <line x1="228" y1="46" x2="304" y2="46" stroke="#22262e" stroke-width="3"/>
+  <circle cx="284" cy="32" r="11" fill="#f5e9c8"/>
+  <circle cx="288" cy="29" r="9" fill="#37456b"/>
+  <circle class="star1" cx="240" cy="24" r="1.6" fill="#fff"/>
+  <circle class="star2" cx="252" cy="60" r="1.4" fill="#fff"/>
+  <rect x="14" y="12" width="96" height="126" rx="3" fill="#4a3524"/>
+  <rect x="20" y="20" width="84" height="26" fill="#33241a"/>
+  <rect x="20" y="54" width="84" height="26" fill="#33241a"/>
+  <rect x="20" y="88" width="84" height="26" fill="#33241a"/>
+  <g>
+    <rect x="23" y="23" width="9" height="23" fill="#8a4a3d"/><rect x="34" y="25" width="8" height="21" fill="#5a6e4a"/><rect x="44" y="22" width="10" height="24" fill="#8a743d"/><rect x="56" y="24" width="8" height="22" fill="#4a5a7a"/><rect x="66" y="23" width="9" height="23" fill="#7a5a8a"/><rect x="77" y="25" width="8" height="21" fill="#8a4a3d"/><rect x="87" y="22" width="10" height="24" fill="#5a6e4a"/>
+    <rect x="23" y="57" width="10" height="23" fill="#4a5a7a"/><rect x="35" y="59" width="8" height="21" fill="#8a743d"/><rect x="45" y="56" width="9" height="24" fill="#8a4a3d"/><rect x="56" y="58" width="10" height="22" fill="#7a5a8a"/><rect x="68" y="57" width="8" height="23" fill="#5a6e4a"/><rect x="78" y="59" width="9" height="21" fill="#4a5a7a"/><rect x="89" y="56" width="8" height="24" fill="#8a743d"/>
+    <rect x="23" y="91" width="8" height="23" fill="#7a5a8a"/><rect x="33" y="93" width="10" height="21" fill="#8a4a3d"/><rect x="45" y="90" width="8" height="24" fill="#5a6e4a"/><rect x="55" y="92" width="9" height="22" fill="#8a743d"/><rect x="66" y="91" width="10" height="23" fill="#4a5a7a"/><rect x="78" y="93" width="8" height="21" fill="#8a4a3d"/><rect x="88" y="90" width="9" height="24" fill="#7a5a8a"/>
+  </g>
+  <rect x="0" y="150" width="320" height="25" fill="#1e1a26"/>
+  <rect x="130" y="118" width="180" height="10" rx="2" fill="#5c4326"/>
+  <rect x="138" y="128" width="8" height="26" fill="#4a3524"/>
+  <rect x="294" y="128" width="8" height="26" fill="#4a3524"/>
+  <rect x="146" y="106" width="26" height="12" rx="2" fill="#6d5a3a"/>
+  <rect x="150" y="98" width="18" height="8" rx="1" fill="#5a4a30"/>
+  <rect x="240" y="92" width="12" height="26" rx="2" fill="#8a7358"/>
+  <ellipse cx="246" cy="92" rx="8" ry="3" fill="#a08a68"/>
+  <rect x="244" y="82" width="4" height="10" fill="#f5e9c8"/>
+  <path class="flame" d="M246 74 Q250 79 246 83 Q242 79 246 74Z" fill="#ffb84d"/>
+  <circle class="glow" cx="246" cy="78" r="12" fill="#ffcf6b" opacity=".3"/>
+  <g class="floaty">
+    <circle class="glow" cx="205" cy="104" r="22" fill="#ffe9a8" opacity=".45"/>
+    <rect x="188" y="94" width="34" height="24" rx="2" fill="#fdf3dd" transform="rotate(-6 205 106)"/>
+    <g transform="rotate(-6 205 106)" stroke="#8a7358" stroke-width="1">
+      <line x1="192" y1="100" x2="218" y2="100"/><line x1="192" y1="105" x2="218" y2="105"/><line x1="192" y1="110" x2="218" y2="110"/>
+    </g>
+    <text x="205" y="112" font-size="11" text-anchor="middle" fill="#6d4c2b" transform="rotate(-6 205 106)">♪♫</text>
+  </g>
+  <text class="floaty2" x="176" y="82" font-size="12" fill="#ffd97a">♪</text>
+  <text class="floaty3" x="232" y="66" font-size="10" fill="#ffd97a">♫</text>
+  <g>
+    <ellipse cx="290" cy="150" rx="14" ry="5" fill="#141018"/>
+    <rect x="281" y="122" width="18" height="26" rx="6" fill="#3d4a5c"/>
+    <circle cx="290" cy="114" r="9" fill="#e8c49a"/>
+    <path d="M281 111 Q290 102 299 111 L299 116 Q290 109 281 116Z" fill="#3a2c20"/>
+  </g>
+  <text x="160" y="170" font-size="9" fill="#8a7f96" text-anchor="middle" letter-spacing="2">香城大學 · 圖書館古籍區 · 深夜</text>
+</svg>`,
+
+/* 第 2 幕:穿越漩渦 */
+warp:`<svg viewBox="0 0 320 175" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="175" fill="#1a1230"/>
+  <circle class="star1" cx="40" cy="30" r="2" fill="#fff"/>
+  <circle class="star2" cx="280" cy="22" r="1.6" fill="#fff"/>
+  <circle class="star3" cx="60" cy="140" r="1.8" fill="#fff"/>
+  <circle class="star1" cx="290" cy="150" r="1.5" fill="#fff"/>
+  <circle class="star3" cx="30" cy="90" r="1.4" fill="#fff"/>
+  <g class="spinR" opacity=".5">
+    <circle cx="160" cy="88" r="72" fill="none" stroke="#7a5aa8" stroke-width="3" stroke-dasharray="30 18"/>
+  </g>
+  <g class="spin">
+    <circle cx="160" cy="88" r="56" fill="none" stroke="#b08ad4" stroke-width="3" stroke-dasharray="20 14"/>
+    <text x="160" y="26" font-size="15" fill="#ffd97a" text-anchor="middle">♪</text>
+    <text x="216" y="94" font-size="14" fill="#ffd97a" text-anchor="middle">♫</text>
+    <text x="160" y="152" font-size="15" fill="#ffd97a" text-anchor="middle">♬</text>
+    <text x="106" y="94" font-size="14" fill="#ffd97a" text-anchor="middle">♩</text>
+  </g>
+  <g class="spinR">
+    <circle cx="160" cy="88" r="38" fill="none" stroke="#e8c8ff" stroke-width="2.5" stroke-dasharray="12 10"/>
+  </g>
+  <circle class="glow" cx="160" cy="88" r="30" fill="#ffe9a8" opacity=".5"/>
+  <circle cx="160" cy="88" r="18" fill="#fff6dc"/>
+  <g transform="rotate(-8 160 88)">
+    <rect x="146" y="78" width="28" height="20" rx="2" fill="#fdf3dd" stroke="#c9a06a"/>
+    <line x1="150" y1="83" x2="170" y2="83" stroke="#8a7358"/>
+    <line x1="150" y1="88" x2="170" y2="88" stroke="#8a7358"/>
+    <line x1="150" y1="93" x2="170" y2="93" stroke="#8a7358"/>
+  </g>
+  <g class="floaty">
+    <ellipse cx="160" cy="160" rx="16" ry="4" fill="#0e0a1c"/>
+    <rect x="150" y="128" width="20" height="28" rx="7" fill="#3d4a5c"/>
+    <circle cx="160" cy="119" r="10" fill="#e8c49a"/>
+    <path d="M150 116 Q160 106 170 116 L170 121 Q160 113 150 121Z" fill="#3a2c20"/>
+    <line x1="150" y1="134" x2="140" y2="122" stroke="#3d4a5c" stroke-width="5" stroke-linecap="round"/>
+    <line x1="170" y1="134" x2="180" y2="122" stroke="#3d4a5c" stroke-width="5" stroke-linecap="round"/>
+  </g>
+  <text x="160" y="170" font-size="9" fill="#9a8ab6" text-anchor="middle" letter-spacing="2">音符化作金色漩渦,將你捲入時空之流……</text>
+</svg>`,
+
+/* 第 3 幕:維也納街頭遇見莫札特 */
+street:`<svg viewBox="0 0 320 175" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="175" fill="#bfd8e8"/>
+  <circle cx="270" cy="28" r="14" fill="#ffe9a8"/>
+  <rect x="0" y="30" width="74" height="90" fill="#d4b483"/>
+  <path d="M-6 32 L37 8 L80 32Z" fill="#9c5a3d"/>
+  <rect x="10" y="46" width="16" height="18" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="44" y="46" width="16" height="18" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="10" y="78" width="16" height="18" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="44" y="78" width="16" height="18" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="96" y="42" width="66" height="78" fill="#e0cfa8"/>
+  <path d="M90 44 L129 20 L168 44Z" fill="#7a5a3d"/>
+  <rect x="106" y="56" width="14" height="16" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="138" y="56" width="14" height="16" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="120" y="92" width="20" height="28" fill="#5c4326"/>
+  <rect x="240" y="26" width="80" height="94" fill="#c9b08a"/>
+  <path d="M234 28 L280 4 L326 28Z" fill="#8a4a3d"/>
+  <rect x="252" y="42" width="15" height="17" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="286" y="42" width="15" height="17" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="252" y="74" width="15" height="17" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="286" y="74" width="15" height="17" fill="#e8f1f5" stroke="#8a6a48"/>
+  <rect x="0" y="120" width="320" height="55" fill="#b0a08a"/>
+  <g stroke="#8a7a64" stroke-width="1" opacity=".6">
+    <ellipse cx="30" cy="132" rx="10" ry="4" fill="none"/><ellipse cx="80" cy="144" rx="10" ry="4" fill="none"/><ellipse cx="140" cy="132" rx="10" ry="4" fill="none"/><ellipse cx="200" cy="146" rx="10" ry="4" fill="none"/><ellipse cx="260" cy="132" rx="10" ry="4" fill="none"/><ellipse cx="300" cy="148" rx="10" ry="4" fill="none"/><ellipse cx="55" cy="160" rx="10" ry="4" fill="none"/><ellipse cx="170" cy="162" rx="10" ry="4" fill="none"/>
+  </g>
+  <g>
+    <ellipse cx="196" cy="152" rx="17" ry="5" fill="rgba(0,0,0,.2)"/>
+    <line x1="190" y1="132" x2="184" y2="150" stroke="#f0e6d8" stroke-width="5" stroke-linecap="round"/>
+    <line x1="202" y1="132" x2="210" y2="148" stroke="#f0e6d8" stroke-width="5" stroke-linecap="round"/>
+    <rect x="184" y="100" width="26" height="36" rx="8" fill="#b03030"/>
+    <path d="M184 108 L172 96" stroke="#b03030" stroke-width="6" stroke-linecap="round"/>
+    <path d="M210 108 L224 100" stroke="#b03030" stroke-width="6" stroke-linecap="round"/>
+    <rect x="192" y="104" width="10" height="16" fill="#ffe9c4"/>
+    <circle cx="197" cy="90" r="11" fill="#f0cfa8"/>
+    <path d="M186 88 Q186 76 197 76 Q208 76 208 88 L208 92 Q205 84 197 84 Q189 84 186 92Z" fill="#efe8dc"/>
+    <circle cx="184" cy="90" r="4.5" fill="#efe8dc"/>
+    <circle cx="210" cy="90" r="4.5" fill="#efe8dc"/>
+    <circle cx="193" cy="89" r="1.5" fill="#3d2c18"/>
+    <circle cx="201" cy="89" r="1.5" fill="#3d2c18"/>
+    <path d="M193 95 Q197 99 201 95" stroke="#a06a4a" stroke-width="1.5" fill="none"/>
+  </g>
+  <g class="paper">
+    <rect x="150" y="86" width="16" height="12" rx="1" fill="#fdf3dd" stroke="#c9a06a" stroke-width=".8"/>
+    <text x="158" y="95" font-size="7" text-anchor="middle" fill="#8a5f36">♪</text>
+  </g>
+  <g class="paper2">
+    <rect x="228" y="74" width="15" height="11" rx="1" fill="#fdf3dd" stroke="#c9a06a" stroke-width=".8"/>
+    <text x="235" y="82" font-size="7" text-anchor="middle" fill="#8a5f36">♫</text>
+  </g>
+  <g class="paper" style="animation-delay:2s">
+    <rect x="176" y="64" width="14" height="11" rx="1" fill="#fdf3dd" stroke="#c9a06a" stroke-width=".8"/>
+    <text x="183" y="72" font-size="7" text-anchor="middle" fill="#8a5f36">♬</text>
+  </g>
+  <g>
+    <ellipse cx="96" cy="154" rx="14" ry="5" fill="rgba(0,0,0,.2)"/>
+    <line x1="91" y1="136" x2="88" y2="152" stroke="#4a3222" stroke-width="5" stroke-linecap="round"/>
+    <line x1="101" y1="136" x2="104" y2="152" stroke="#4a3222" stroke-width="5" stroke-linecap="round"/>
+    <rect x="85" y="108" width="22" height="30" rx="7" fill="#7a3b3b"/>
+    <circle cx="96" cy="99" r="10" fill="#f0cfa8"/>
+    <path d="M86 96 Q96 86 106 96 L106 101 Q96 93 86 101Z" fill="#3a2c20"/>
+    <circle cx="93" cy="98" r="1.4" fill="#3d2c18"/>
+    <circle cx="100" cy="98" r="1.4" fill="#3d2c18"/>
+    <ellipse cx="96" cy="103" rx="3" ry="2" fill="#3d2c18"/>
+  </g>
+  <text x="128" y="88" font-size="13" fill="#7a5230" font-weight="bold">!?</text>
+  <text x="160" y="170" font-size="9" fill="#6a5a48" text-anchor="middle" letter-spacing="2">1786 年 · 維也納街頭 · 紅衣男子與滿天飛舞的譜紙</text>
+</svg>`,
+
+/* 第 4 幕:小繆思 */
+muse:`<svg viewBox="0 0 320 175" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="175" fill="#241a3e"/>
+  <circle class="star1" cx="34" cy="26" r="2" fill="#fff"/>
+  <circle class="star2" cx="90" cy="14" r="1.5" fill="#fff"/>
+  <circle class="star3" cx="270" cy="20" r="2" fill="#fff"/>
+  <circle class="star1" cx="300" cy="60" r="1.5" fill="#fff"/>
+  <circle class="star2" cx="20" cy="80" r="1.4" fill="#fff"/>
+  <circle class="star3" cx="250" cy="90" r="1.6" fill="#fff"/>
+  <circle cx="286" cy="34" r="13" fill="#f5e9c8"/>
+  <circle cx="291" cy="30" r="10" fill="#241a3e"/>
+  <path d="M0 140 Q60 120 120 138 Q200 152 320 132 L320 175 L0 175Z" fill="#181228"/>
+  <g>
+    <path d="M40 138 L52 108 L64 138Z" fill="#2c2244"/>
+    <rect x="49" y="96" width="6" height="14" fill="#2c2244"/>
+    <path d="M240 142 L254 104 L268 142Z" fill="#2c2244"/>
+    <rect x="251" y="92" width="6" height="14" fill="#2c2244"/>
+  </g>
+  <g>
+    <ellipse cx="150" cy="158" rx="18" ry="5" fill="#0e0a1c"/>
+    <rect x="138" y="120" width="24" height="34" rx="8" fill="#3d4a5c"/>
+    <circle cx="150" cy="110" r="11" fill="#e8c49a"/>
+    <path d="M139 107 Q150 96 161 107 L161 112 Q150 104 139 112Z" fill="#3a2c20"/>
+    <circle cx="147" cy="109" r="1.5" fill="#2c2016"/>
+    <circle cx="154" cy="109" r="1.5" fill="#2c2016"/>
+    <path d="M147 114 Q150 117 153 114" stroke="#a06a4a" stroke-width="1.4" fill="none"/>
+    <line x1="160" y1="128" x2="174" y2="116" stroke="#3d4a5c" stroke-width="6" stroke-linecap="round"/>
+  </g>
+  <g class="floaty">
+    <circle class="glow" cx="196" cy="92" r="26" fill="#ffe9a8" opacity=".4"/>
+    <circle cx="196" cy="92" r="11" fill="#fff2c8"/>
+    <circle cx="196" cy="92" r="6" fill="#fffdf4"/>
+    <path d="M185 88 Q174 80 172 90 Q178 96 185 93Z" fill="#e8d8ff" opacity=".85"/>
+    <path d="M207 88 Q218 80 220 90 Q214 96 207 93Z" fill="#e8d8ff" opacity=".85"/>
+    <text x="196" y="97" font-size="10" text-anchor="middle" fill="#a97c2a">♪</text>
+  </g>
+  <text class="floaty2" x="220" y="70" font-size="12" fill="#ffd97a">✦</text>
+  <text class="floaty3" x="172" y="62" font-size="10" fill="#ffd97a">✧</text>
+  <text class="floaty" x="230" y="110" font-size="9" fill="#ffd97a">✧</text>
+  <text class="floaty2" x="120" y="80" font-size="12" fill="#c8b8e8">♫</text>
+  <text x="160" y="170" font-size="9" fill="#9a8ab6" text-anchor="middle" letter-spacing="2">音樂繆思的光點,停在你的肩頭</text>
+</svg>`
+};
+
+/* ══════════ 開場故事 ══════════ */
+const STORY=[
+  {art:"lib", title:"香城大學 · 音樂系", text:
+"你是香城大學音樂系三年級的學生,期末報告的題目正是——莫札特《費加洛的婚禮》。\n\n深夜的圖書館古籍區,你在一個佈滿灰塵的木盒裡,發現一頁泛黃的樂譜殘稿,墨跡竟像是親筆手書……"},
+  {art:"warp", title:"穿越", text:
+"指尖觸到樂譜的瞬間,紙上的音符突然發出金光,在空中旋轉成漩渦!\n\n耳邊響起序曲般奔湧的旋律,你眼前一黑——\n\n再睜開眼,你躺在鵝卵石街道上。馬車轆轆、教堂鐘聲、遠處傳來大鍵琴的聲音……這裡是 1786 年的維也納!"},
+  {art:"street", title:"急匆匆的紅衣男子", text:
+"「讓一讓!讓一讓——哎呀!」\n\n一位穿紅色外套、戴白色假髮的男子撞上了你,滿地散落的譜紙隨風飛舞。\n\n「抱歉抱歉!我在找我的手稿——《費加洛的婚禮》的樂譜散落在城裡各處了!首演就快到了,完蛋了完蛋了……」\n\n你倒抽一口氣。眼前這位,正是課本裡的那個人——沃夫岡·阿瑪迪斯·莫札特!"},
+  {art:"muse", title:"小繆思的耳語", text:
+"一顆小小的光點飄到你肩上,是音樂繆思的化身。\n\n「旅人呀,把散落的 5 頁手稿找回來,幫助《費加洛的婚禮》順利首演——那頁把你帶來的樂譜,也許就是你回到現代的鑰匙。」\n\n冒險開始之前,請告訴維也納——你的名字。", input:true}
+];
+let storyIdx=0;
+function renderStory(){
+  const st=STORY[storyIdx], box=document.getElementById("storyBox");
+  box.innerHTML="";
+  if(gameStarted){
+    const skip=document.createElement("button");skip.className="skipbtn";skip.textContent="✕ 返回遊戲";
+    skip.onclick=closeIntro;box.appendChild(skip);
+  }
+  const art=document.createElement("div");art.className="scene-art";art.innerHTML=ART[st.art];box.appendChild(art);
+  const h=document.createElement("h2");h.textContent=st.title;box.appendChild(h);
+  const p=document.createElement("p");p.textContent=st.text;box.appendChild(p);
+  if(st.input){
+    if(gameStarted){
+      const done=document.createElement("p");done.style.textAlign="center";done.style.color="#8a7358";
+      done.textContent="——你的名字是 "+S.name+",冒險仍在繼續。——";
+      box.appendChild(done);
+      const btn=document.createElement("button");btn.textContent="↩ 返回遊戲";
+      btn.onclick=closeIntro;box.appendChild(btn);
+      const back=document.createElement("button");back.textContent="◀";back.className="ghost";back.style.marginLeft="8px";
+      back.onclick=()=>{storyIdx--;renderStory();};box.appendChild(back);
+    }else{
+      const inp=document.createElement("input");inp.id="nameInput";inp.placeholder="輸入你的名字…";inp.maxLength=12;
+      box.appendChild(inp);box.appendChild(document.createElement("br"));
+      const btn=document.createElement("button");btn.textContent="🎼 踏入 1786 年的維也納";
+      btn.onclick=()=>{
+        const v=inp.value.trim()||"小音樂家";
+        S.name=v;document.getElementById("pname").textContent=v;
+        gameStarted=true;
+        closeIntro();
+        showWelcome(v);
+      };
+      inp.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();});
+      box.appendChild(btn);
+      setTimeout(()=>inp.focus(),100);
+    }
+  }else{
+    const btn=document.createElement("button");btn.textContent="下一頁 ▶";
+    btn.onclick=()=>{storyIdx++;renderStory();};
+    box.appendChild(btn);
+    if(storyIdx>0){
+      const back=document.createElement("button");back.textContent="◀";back.className="ghost";back.style.marginLeft="8px";
+      back.onclick=()=>{storyIdx--;renderStory();};
+      box.appendChild(back);
+    }
+  }
+  const dots=document.createElement("div");dots.className="dots";
+  dots.textContent=STORY.map((_,i)=>i===storyIdx?"●":"○").join(" ");
+  box.appendChild(dots);
+}
+function closeIntro(){document.getElementById("intro").style.display="none";}
+function openIntro(){
+  storyIdx=0;
+  document.getElementById("intro").style.display="flex";
+  renderStory();
+}
+document.getElementById("storyBtn").addEventListener("click",()=>{
+  if(!gameStarted)return;
+  openIntro();
+});
+renderStory();
+
+/* ══════════ 歡迎彈窗 ══════════ */
+function showWelcome(name){
+  document.getElementById("welcomeText").innerHTML=
+    "你好,<span class='hl'>"+name.replace(/</g,"&lt;").replace(/>/g,"&gt;")+"</span>,你已經穿越到<span class='hl'>古典時期</span>!\n\n"+
+    "現在需要你集齊 <span class='hl'>5 項樂譜手稿</span>,才能回到你的住處。\n\n"+
+    "📜 第一頁手稿就在 <span class='hl'>☕ 中央咖啡館</span>——\n\n快去尋找失落的樂譜手稿吧!";
+  document.getElementById("welcome").classList.add("show");
+}
+document.getElementById("welcomeBtn").addEventListener("click",()=>{
+  document.getElementById("welcome").classList.remove("show");
+  log("🌅 "+S.name+",你的維也納冒險開始了!第一頁手稿在 ☕ 中央咖啡館,快去尋找吧!");
+  muse(S.name+",答對咖啡館 8 題古典樂識,老闆就會交出第一頁手稿喔!");
+  refresh();
+});
+
+/* ══════════ 咖啡館題庫:古典時期的特徵 ══════════ */
+const CAFE_QUIZ=[
+  {q:"古典時期音樂最主要的織體(texture)是?",opts:["主調音樂(一條主旋律+和聲伴奏)","複調音樂(多條旋律交織)","單音音樂(只有一條旋律)"],ans:0,tip:"古典時期以「主調音樂」為主:清晰的主旋律配上和聲伴奏,取代了巴洛克的複調交織。"},
+  {q:"古典時期的樂句常常成對出現、一前一後互相呼應,這種結構稱為?",opts:["問答句(前句如問、後句如答)","卡農句","固定低音句"],ans:0,tip:"「問答句」:前句(antecedent)像提問,後句(consequent)像回答,工整對稱,是古典風格的招牌!"},
+  {q:"下列哪一組全是「古典時期」的著名作曲家?",opts:["巴哈、韓德爾、韋瓦第","海頓、莫札特、貝多芬","蕭邦、李斯特、布拉姆斯"],ans:1,tip:"維也納古典樂派三巨頭:海頓、莫札特、貝多芬。巴哈那組是巴洛克,蕭邦那組是浪漫時期。"},
+  {q:"古典時期鍵盤伴奏常用「分解和弦」低音,像波浪一樣流動,這種伴奏音型叫?",opts:["阿爾貝提低音(Alberti Bass)","數字低音","頑固低音"],ans:0,tip:"阿爾貝提低音把和弦拆成「低-高-中-高」的流動音型,莫札特 C 大調鋼琴奏鳴曲 K.545 開頭就是!"},
+  {q:"與巴洛克的「階梯式力度」不同,古典時期常用的力度手法是?",opts:["全曲維持同一音量","漸強、漸弱(crescendo / diminuendo)","只用最強音演奏"],ans:1,tip:"古典時期樂團(如曼海姆樂派)發展出漸強漸弱的細膩力度變化,讓音樂像呼吸一樣有起伏。"},
+  {q:"古典時期音樂的整體風格特徵是?",opts:["莊嚴繁複、裝飾華麗","簡潔清晰、對稱平衡、優雅工整","朦朧飄渺、色彩至上"],ans:1,tip:"古典風格追求如建築般的對稱與平衡:旋律簡潔如歌、結構清晰工整。"},
+  {q:"巴洛克時期盛行的「數字低音」到了古典時期?",opts:["更加盛行","逐漸式微、被寫定的伴奏聲部取代","變成獨奏樂器"],ans:1,tip:"古典時期作曲家把伴奏完整寫出來,不再靠數字低音即興,和聲進行也更清晰規範。"},
+  {q:"古典時期確立的交響曲標準結構是?",opts:["四個樂章:快板—慢板—小步舞曲—終曲","單一樂章","七個樂章的組曲"],ans:0,tip:"「交響曲之父」海頓確立了四樂章形式,成為古典交響曲的典範。"},
+  {q:"古典時期逐漸取代大鍵琴的鍵盤樂器是?",opts:["管風琴","古鋼琴/鋼琴(Fortepiano)","手風琴"],ans:1,tip:"鋼琴能隨觸鍵奏出強(forte)弱(piano),正好配合古典時期細膩的力度表現。"},
+  {q:"古典時期最重要的曲式,常用於交響曲與奏鳴曲第一樂章的是?",opts:["賦格曲式","奏鳴曲式(呈示部—發展部—再現部)","變奏曲式"],ans:1,tip:"奏鳴曲式是古典時期的戲劇舞台:兩個主題在呈示部登場、發展部冒險、再現部回家。"},
+  {q:"「維也納古典樂派」以哪座城市為中心?",opts:["巴黎","倫敦","維也納"],ans:2,tip:"海頓、莫札特、貝多芬都在維也納活躍,這裡就是古典音樂之都——你腳下的城市!"},
+  {q:"古典時期的旋律特色是?",opts:["冗長綿延、難以分段","短小如歌、樂句工整易記","完全沒有旋律"],ans:1,tip:"古典旋律像民歌一樣自然易記,常以 4+4 小節的工整樂句構成。"}
+];
+
+/* ══════════ 其他題庫 ══════════ */
+const QUIZ={
+  sonata:{q:"奏鳴曲式(Sonata Form)的三大段落依序是?",opts:["呈示部 → 發展部 → 再現部","前奏 → 主歌 → 副歌","快板 → 慢板 → 快板"],ans:0,tip:"呈示部提出主題,發展部讓它冒險變化,再現部像回家一樣重現主題。"},
+  piano:{q:"古典時期,哪種樂器逐漸取代了大鍵琴?",opts:["管風琴","鋼琴(Fortepiano)","豎琴"],ans:1,tip:"鋼琴能奏出強(forte)弱(piano)變化,名字正由此而來!"},
+  haydn:{q:"被尊稱為「交響曲之父」的作曲家是?",opts:["莫札特","貝多芬","海頓"],ans:2,tip:"海頓寫了 104 首交響曲,確立了四樂章形式。"},
+  quartet:{q:"弦樂四重奏的標準編制是?",opts:["兩把小提琴、中提琴、大提琴","小提琴、中提琴、大提琴、低音提琴","四把小提琴"],ans:0,tip:"海頓確立的組合,像四位好友的對話。"},
+  minuet:{q:"小步舞曲(Minuet)通常是幾拍子?",opts:["2/4 拍","3/4 拍","4/4 拍"],ans:1,tip:"優雅的三拍子宮廷舞曲,常放在交響曲第三樂章。"},
+  rondo:{q:"迴旋曲式(Rondo)的典型結構是?",opts:["AABB","ABACA","ABCBA"],ans:1,tip:"主題 A 像老朋友不斷回來,中間穿插不同插部。"},
+  era:{q:"「古典時期」大約是指哪段年代?",opts:["約 1600–1750 年","約 1750–1820 年","約 1820–1900 年"],ans:1,tip:"巴哈逝世的 1750 年常被視為古典時期的開端。"},
+  figaro:{q:"《費加洛的婚禮》首演年份是?",opts:["1756 年","1786 年","1791 年"],ans:1,tip:"1756 是莫札特出生年、1791 是逝世年,《費加洛》首演是 1786!"},
+  surprise:{q:"海頓《驚愕交響曲》「驚愕」在哪?",opts:["第二樂章突然的巨大和弦","整首沒有旋律","樂手突然站起來"],ans:0,tip:"海頓在輕柔慢板中放了一聲驚雷,想叫醒打瞌睡的聽眾!"},
+  lent:{q:"四旬期(Lent)期間,維也納歌劇院通常會?",opts:["照常演歌劇","關閉,改辦清唱劇與音樂會","只演喜劇"],ans:1,tip:"齋戒期禁演歌劇,反而讓音樂會蓬勃發展。"},
+  orch:{q:"古典時期管弦樂團的核心是?",opts:["以弦樂為主體,搭配成對木管與銅管","以打擊樂為主體","以電子樂器為主體"],ans:0,tip:"弦樂五部是基礎,加上成對的長笛、雙簧管、低音管等。"},
+  salzburg:{q:"莫札特出生於哪座城市?",opts:["維也納","薩爾斯堡","布拉格"],ans:1,tip:"1756 年生於薩爾斯堡,後來才到維也納闖蕩。"}
+};
+
+/* ══════════ NPC 對話 ══════════ */
+const NPC={
+  mozart:{name:"沃夫岡·阿瑪迪斯·莫札特",role:"30 歲的天才作曲家,俏皮機智",
+    hello:()=> "哈,是你!"+S.name+"!那天在街上撞到你的事真是抱歉。😅 我的《費加洛》手稿還散落在城裡……想聊什麼?歌劇?鋼琴?還是我最近惹惱了多少貴族?",
+    rules:[
+      [/費加洛|歌劇|figaro|手稿/i,"《費加洛的婚禮》是我的心血!改編自博馬舍的話劇,講僕人智勝伯爵——貴族氣得跳腳,觀眾笑得前仰後合。拜託你了,幫我把散落的手稿找回來!音樂要像香檳,一開瓶就停不下來!"],
+      [/鋼琴|piano|協奏曲/i,"鋼琴是會唱歌的樂器!我為它寫了二十多首協奏曲。祕訣?讓鋼琴和樂團像好友聊天,一來一往,偶爾鬥鬥嘴。"],
+      [/海頓|haydn/i,"海頓爸爸!我最敬愛的人。我把六首四重奏題獻給他,他對我父親說:『您的兒子是我所知最偉大的作曲家。』"],
+      [/薩爾斯堡|出生|故鄉/i,"薩爾斯堡,1756 年。我六歲就被父親帶著巡演全歐洲——別羨慕,馬車坐久了屁股很痛。"],
+      [/土耳其|進行曲|turca/i,"《土耳其進行曲》?哈,那是我 A 大調奏鳴曲的終樂章!清楚的主旋律配上鏗鏘的和弦伴奏——標準的主調音樂,學著點!🎹"],
+      [/奏鳴曲|曲式|sonata/i,"奏鳴曲式?呈示部介紹兩位主角,發展部讓他們大吵一架,再現部握手言和。戲劇,全是戲劇!"],
+      [/香城|大學|未來|穿越/i,"香城大學?沒聽過這地方……你說話的口音確實奇特。嗯,不管你從哪來,懂音樂的就是朋友!🎵"],
+      [/你好|嗨|哈囉/,"你好呀!今天的維也納有靈感的味道。我剛用撞球桿敲出一段旋律,要聽嗎?🎱🎵"]
+    ],
+    fallback:"哈,這個嘛……與其用說的,不如我彈給你聽!(他在鍵盤上滾出一串音階)歌劇、鋼琴、海頓爸爸,我都能聊三天三夜!"},
+  haydn:{name:"約瑟夫·海頓",role:"54 歲的宮廷樂長,溫厚慈祥",
+    hello:()=> "歡迎,"+S.name+"。你的名聲我已有耳聞。我是海頓,在艾斯特哈齊侯爵府當了二十多年樂長。聽說你在幫沃夫岡找手稿?好孩子。坐吧,想聊些什麼?",
+    rules:[
+      [/交響曲|symphony/i,"交響曲是我一生的功課:快板、慢板、小步舞曲、終曲四個樂章。與世隔絕的宮廷反而逼我原創——沒人可模仿,只好自己發明。"],
+      [/驚愕|surprise|94/i,"哈哈,《驚愕》啊。慢板輕柔得像搖籃曲,然後——砰!打瞌睡的聽眾都彈起來了。音樂嘛,偶爾也要開開玩笑。"],
+      [/四重奏|quartet/i,"弦樂四重奏是四位理性之人的對話:兩把小提琴、中提琴、大提琴,誰也不壓過誰。"],
+      [/莫札特|mozart/i,"沃夫岡是上天賜給音樂的禮物。我對他父親說過:您的兒子是我所知最偉大的作曲家。此話發自肺腑。"],
+      [/快樂頌|歡樂頌|ode/i,"《快樂頌》……那份樂譜的旋律簡潔卻充滿力量,像全人類在一起歌唱。說來奇妙,我總覺得寫下它的人,將來必成大器。"],
+      [/你好|嗨|哈囉/,"你好,孩子。今天練琴了嗎?音樂之路沒有捷徑,但每一步都算數。"]
+    ],
+    fallback:"嗯,有意思。老實說,我的學問都在五線譜裡。聊聊交響曲、四重奏,或那個了不起的莫札特吧。"}
+};
+
+/* ══════════ 地圖建築 ══════════ */
+const BUILDINGS=[
+  {id:"home",  icon:"🏠", name:"我的工作室", x:60,  y:70,  w:150, h:110, wall:"#c9a06a", roof:"#8a5a33"},
+  {id:"cafe",  icon:"☕", name:"中央咖啡館", x:405, y:70,  w:150, h:110, wall:"#b98d5e", roof:"#6d4c2b"},
+  {id:"shop",  icon:"🎶", name:"樂譜店",     x:750, y:70,  w:150, h:110, wall:"#c9b06a", roof:"#7a6233"},
+  {id:"mozart",icon:"🎩", name:"莫札特宅邸", x:60,  y:300, w:160, h:115, wall:"#d4b483", roof:"#9c2b2b"},
+  {id:"haydn", icon:"🎻", name:"海頓府第",   x:740, y:300, w:160, h:115, wall:"#d4c483", roof:"#2b6d9c",
+    lock:()=>S.rep<10, lockMsg:"門房上下打量你:「你是誰?海頓先生不接見你!」(聲望達到 10,就能進入海頓府第)"},
+  {id:"salon", icon:"🕯️", name:"貴族沙龍",   x:100, y:480, w:170, h:110, wall:"#e0cfa8", roof:"#6a4a8a", lock:()=>S.rep<3, lockMsg:"需要聲望 3 才能受邀進入沙龍。"},
+  {id:"opera", icon:"🏛️", name:"城堡劇院",   x:560, y:460, w:280, h:130, wall:"#e8dcc0", roof:"#a08a3d", lock:()=>!S.pages.every(p=>p), lockMsg:"集齊 5 頁《費加洛》樂譜才能參加首演!"}
+];
+BUILDINGS.forEach(b=>{ b.door={x:b.x+b.w/2-24, y:b.y+b.h, w:48, h:34}; });
+
+/* ══════════ 地點行動 ══════════ */
+const ACTS={
+  home:[
+    {t:"✍️ 抄寫樂譜(+12 克朗,-20 體力)",f:()=>{if(!useEnergy(20))return;S.gold+=12;log("你端正地抄完一份分譜,賺得 12 克朗。");tick();closeModal();}},
+    {t:"🎤 公開演奏:認出高音譜號音符(每次 -10 體力,答對 +1 聲望,答錯再 -5 體力)",f:performShow},
+    {t:"😴 睡覺(進入隔天,體力全滿)",f:()=>{sleep();closeModal();}}
+  ],
+  cafe:[
+    {t:"🎓 古典樂識問答(連續答題,每題 -5 體力)★ 答對 8 題得手稿線索",f:cafeQuiz}
+  ],
+  mozart:[
+    {t:"💬 與莫札特交談(AI 對話)",f:()=>chat("mozart")},
+    {t:"🎼 請教作曲(問答,-15 體力)",f:()=>quiz(["figaro","salzburg"],12,2,15)},
+    {t:"📜 尋找樂譜頁(第 3 頁)",f:()=>pageQuest(2,"sonata","「這頁夾在我的手稿堆裡!」莫札特眨眨眼,「不過你得先答對我的問題。」")}
+  ],
+  haydn:[
+    {t:"💬 與海頓交談(AI 對話)",f:()=>chat("haydn")},
+    {t:"🎼 請教交響曲(問答,-15 體力)",f:()=>quiz(["haydn","surprise","quartet"],12,2,15)},
+    {t:"📜 尋找樂譜頁(第 2 頁)★ 海頓想要《快樂頌》樂譜",f:haydnPage}
+  ],
+  shop:[
+    {t:"🎧 店裡打工:聆聽測驗(聽 30 秒音樂後答題,答對 +15 克朗,每次 -25 體力)",f:shopWork},
+    {t:"📚 買樂理書(-15 克朗,+2 樂識)",f:()=>{if(S.gold<15){log("💸 克朗不夠,先去賺點錢吧。");closeModal();return;}S.gold-=15;S.know+=2;log("你買下《作曲法入門》讀完。(樂識 +2)");tick();closeModal();}},
+    {t:"🎁 購買《快樂頌》樂譜(-100 克朗)★ 海頓想要的珍品",f:buyOde},
+    {t:"📜 尋找樂譜頁(第 4 頁)",f:()=>pageQuest(3,"piano","店主從二手譜中抽出那頁樂譜。「懂樂器的人才配擁有它。」")}
+  ],
+  salon:[
+    {t:"🎭 沙龍演奏(+10 克朗、+1 聲望,-20 體力)",f:()=>{if(!useEnergy(20))return;S.gold+=10;S.rep+=1;log("你的演奏讓伯爵夫人頻頻點頭。(克朗 +10、聲望 +1)");tick();closeModal();}},
+    {t:"🍷 高談樂論:歷史篇",f:()=>quiz(["era","lent","orch"],8,1)},
+    {t:"📜 尋找樂譜頁(第 5 頁)",f:()=>pageQuest(4,"orch","伯爵夫人把樂譜當成了扇子!「陪我聊聊音樂,答得好就給你。」")}
+  ],
+  opera:[
+    {t:"🎉 參加《費加洛婚禮》首演!",f:finale}
+  ]
+};
+const PAGE_AT={cafe:0,haydn:1,mozart:2,shop:3,salon:4};
+
+/* ══════════ 基礎工具 ══════════ */
+const $=id=>document.getElementById(id);
+function log(t){const p=document.createElement("p");p.textContent=t;$("log").prepend(p);}
+function muse(t){$("museTip").innerHTML='<span class="sparkle">✨</span> 小繆思:「'+t+'」';}
+function refresh(){
+  $("day").textContent=S.day;$("slot").textContent=SLOTS[S.slot];
+  $("gold").textContent=S.gold;$("rep").textContent=S.rep;
+  $("know").textContent=S.know;$("energyNum").textContent=S.energy;
+  $("energyBar").style.width=(S.energy/MAXE*100)+"%";
+  $("pages").textContent=S.pages.map(p=>p?"🎼":"□").join(" ");
+  $("cafeCount").textContent=Math.min(S.cafeCorrect,8);
+  $("odeStat").style.display=S.odeScore?"inline-block":"none";
+}
+function useEnergy(n){
+  if(S.energy<n){log("😪 太累了……回 🏠 工作室睡一覺吧。");muse("體力不足!回工作室睡覺就能滿血復活喔~");closeModal();return false;}
+  S.energy-=n;refresh();return true;
+}
+function tick(){
+  S.slot++;
+  if(S.slot>=SLOTS.length){S.slot=SLOTS.length-1;log("🌙 夜深了,維也納的燈火一盞盞熄滅。");muse("已是夜晚,回工作室睡覺迎接新的一天吧!");}
+  refresh();
+}
+function sleep(){
+  S.day++;S.slot=0;S.energy=MAXE;
+  log("🌅 第 "+S.day+" 天。晨光灑進窗戶,"+S.name+"精神飽滿。(體力全滿)");
+  muse("新的一天!答錯的題目可以再挑戰一次。");refresh();
+}
+
+/* ══════════ 彈窗 ══════════ */
+function openModal(title,role,builder){
+  $("mTitle").textContent=title;$("mRole").textContent=role||"";
+  const b=$("mBody");b.innerHTML="";builder(b);
+  $("overlay").classList.add("show");
+}
+function closeModal(){stopMusic();$("overlay").classList.remove("show");refresh();}
+$("overlay").addEventListener("click",e=>{if(e.target===$("overlay"))closeModal();});
+
+function openLoc(b){
+  openModal(b.icon+" "+b.name,"選擇你要做的事",body=>{
+    const c=document.createElement("div");c.className="choices";
+    ACTS[b.id].forEach(a=>{
+      const btn=document.createElement("button");btn.textContent=a.t;btn.onclick=a.f;c.appendChild(btn);
+    });
+    body.appendChild(c);
+    const back=document.createElement("button");back.textContent="↩ 離開";back.className="ghost";back.style.marginTop="10px";
+    back.onclick=closeModal;body.appendChild(back);
+  });
+}
+
+/* ══════════════════════════════════════
+   🎧 音樂合成引擎(Web Audio)
+══════════════════════════════════════ */
+let audioCtx=null, masterGain=null, playTimer=null;
+function noteFreq(n){
+  const m=n.match(/^([A-G])(#?)(\d)$/);
+  const base={C:0,D:2,E:4,F:5,G:7,A:9,B:11}[m[1]]+(m[2]?1:0);
+  const midi=(parseInt(m[3])+1)*12+base;
+  return 440*Math.pow(2,(midi-69)/12);
+}
+function scheduleNote(names,t,dur,vel){
+  (Array.isArray(names)?names:[names]).forEach(nm=>{
+    const o=audioCtx.createOscillator();o.type="triangle";
+    o.frequency.value=noteFreq(nm);
+    const g=audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.linearRampToValueAtTime(vel,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.001,t+Math.max(dur*0.95,0.08)+0.05);
+    o.connect(g);g.connect(masterGain);
+    o.start(t);o.stop(t+dur+0.15);
+  });
+}
+function startMusic(melody,unit,totalSec,onTick,onEnd){
+  stopMusic();
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  if(audioCtx.state==="suspended")audioCtx.resume();
+  masterGain=audioCtx.createGain();masterGain.gain.value=1;
+  masterGain.connect(audioCtx.destination);
+  let t=audioCtx.currentTime+0.15;
+  const start=audioCtx.currentTime, endT=start+totalSec;
+  while(t<endT){
+    for(const nt of melody){
+      if(t>=endT)break;
+      const dur=nt.d*unit;
+      if(nt.n!=="R"){
+        scheduleNote(nt.n,t,dur,nt.v!==undefined?nt.v:0.16);
+        if(nt.acc)scheduleNote(nt.acc,t,dur,(nt.v!==undefined?nt.v:0.16)*0.45);
+      }
+      t+=dur;
+    }
+    t+=unit*2;
+  }
+  playTimer=setInterval(()=>{
+    if(!audioCtx){clearInterval(playTimer);playTimer=null;return;}
+    const el=audioCtx.currentTime-start;
+    const remain=Math.max(0,totalSec-el);
+    if(onTick)onTick(el/totalSec,remain);
+    if(el>=totalSec){
+      clearInterval(playTimer);playTimer=null;
+      stopMusic();
+      if(onEnd)onEnd();
+    }
+  },200);
+}
+function stopMusic(){
+  if(playTimer){clearInterval(playTimer);playTimer=null;}
+  if(audioCtx){
+    const c=audioCtx;audioCtx=null;
+    try{masterGain.gain.linearRampToValueAtTime(0.0001,c.currentTime+0.2);}catch(e){}
+    setTimeout(()=>{try{c.close();}catch(e){}},350);
+    masterGain=null;
+  }
+}
+
+/* ══════════ 三首示範旋律 ══════════ */
+/* 莫札特《土耳其進行曲》主題(主調音樂:主旋律+和弦伴奏) */
+const AM=["A3","C4","E4"], EM=["E3","G#3","B3"];
+const TURKISH=[
+  {n:"B4",d:1},{n:"A4",d:1},{n:"G#4",d:1},{n:"A4",d:1},
+  {n:"C5",d:2,acc:AM},
+  {n:"D5",d:1},{n:"C5",d:1},{n:"B4",d:1},{n:"C5",d:1},
+  {n:"E5",d:2,acc:AM},
+  {n:"F5",d:1},{n:"E5",d:1},{n:"D#5",d:1},{n:"E5",d:1},
+  {n:"B5",d:1},{n:"A5",d:1},{n:"G#5",d:1},{n:"A5",d:1},
+  {n:"B5",d:1},{n:"A5",d:1},{n:"G#5",d:1},{n:"A5",d:1},
+  {n:"C6",d:2,acc:AM},{n:"A5",d:1},{n:"C6",d:1},
+  {n:"B5",d:1,acc:EM},{n:"A5",d:1},{n:"G5",d:1,acc:AM},{n:"A5",d:1},
+  {n:"B5",d:1,acc:EM},{n:"A5",d:1},{n:"G5",d:1,acc:AM},{n:"A5",d:1},
+  {n:"B5",d:1,acc:EM},{n:"A5",d:1},{n:"G5",d:1},{n:"F#5",d:1},
+  {n:"E5",d:2,acc:EM},{n:"R",d:2}
+];
+/* 海頓《驚愕交響曲》第二樂章(弱奏 → 突強!) */
+const SURPRISE=(()=>{
+  const theme=v=>[
+    {n:"C5",d:1,v},{n:"C5",d:1,v},{n:"E5",d:1,v},{n:"E5",d:1,v},
+    {n:"G5",d:1,v},{n:"G5",d:1,v},{n:"E5",d:2,v},
+    {n:"F5",d:1,v},{n:"F5",d:1,v},{n:"D5",d:1,v},{n:"D5",d:1,v},
+    {n:"B4",d:1,v},{n:"B4",d:1,v},{n:"G4",d:2,v}
+  ];
+  return [
+    ...theme(0.10),
+    ...theme(0.055),
+    {n:["G2","G3","B4","D5","G5"],d:3,v:0.85},   /* 💥 突強和弦! */
+    {n:"R",d:4}
+  ];
+})();
+/* 貝多芬《給愛麗絲》主題(問答句結構) */
+const FURELISE=[
+  {n:"E5",d:1},{n:"D#5",d:1},{n:"E5",d:1},{n:"D#5",d:1},{n:"E5",d:1},{n:"B4",d:1},{n:"D5",d:1},{n:"C5",d:1},
+  {n:"A4",d:2,acc:["A2","E3"]},{n:"R",d:1},{n:"C4",d:1},{n:"E4",d:1},{n:"A4",d:1},
+  {n:"B4",d:2,acc:["E2","E3"]},{n:"R",d:1},{n:"E4",d:1},{n:"G#4",d:1},{n:"B4",d:1},
+  {n:"C5",d:2,acc:["A2","E3"]},{n:"R",d:1},{n:"E4",d:1},{n:"E5",d:1},{n:"D#5",d:1},
+  {n:"E5",d:1},{n:"D#5",d:1},{n:"E5",d:1},{n:"B4",d:1},{n:"D5",d:1},{n:"C5",d:1},
+  {n:"A4",d:2,acc:["A2","E3"]},{n:"R",d:1},{n:"C4",d:1},{n:"E4",d:1},{n:"A4",d:1},
+  {n:"B4",d:2,acc:["E2","E3"]},{n:"R",d:1},{n:"E4",d:1},{n:"C5",d:1},{n:"B4",d:1},
+  {n:"A4",d:3,acc:["A2","E3"]},{n:"R",d:2}
+];
+
+/* ══════════ 🎧 樂譜店打工:聆聽測驗 ══════════ */
+const WORK_QUIZ=[
+  {piece:"莫札特《土耳其進行曲》",melody:TURKISH,unit:0.16,
+   q:"莫札特的《土耳其進行曲》用了什麼音樂織體?",
+   opts:["主調音樂(主旋律+和聲伴奏)","複調音樂(多條旋律交織)","單音音樂(只有一條旋律)","頑固低音變奏"],
+   ans:0,tip:"清晰的主旋律配上鏗鏘的和弦伴奏——這正是古典時期典型的「主調音樂」織體!"},
+  {piece:"海頓《驚愕交響曲》第二樂章",melody:SURPRISE,unit:0.32,
+   q:"海頓的《驚愕交響曲》用了什麼力度去演奏?",
+   opts:["從頭到尾都是極強(ff)","輕柔的弱奏中,突然爆出極強和弦(突強)","全曲平均的中等力度","由強開始一路漸弱到結束"],
+   ans:1,tip:"主題以弱(p)、再更弱(pp)演奏,然後突然一記極強(ff)和弦——這就是「驚愕」的由來,海頓想叫醒打瞌睡的聽眾!"},
+  {piece:"貝多芬《給愛麗絲》",melody:FURELISE,unit:0.26,
+   q:"貝多芬的《給愛麗絲》用了什麼旋律結構?",
+   opts:["問答句(前句如問、後句如答)","賦格(主題與答題層層追逐)","頑固低音(同一低音不斷反覆)","十二音列(十二個音輪流出現)"],
+   ans:0,tip:"前句像溫柔的提問,後句像輕輕的回答——工整對稱的「問答句」,正是古典風格旋律的招牌!"}
+];
+function shopWork(){
+  const W=WORK_QUIZ[S.workIdx%WORK_QUIZ.length];
+  openModal("🎧 店裡打工:聆聽測驗","🎶 樂譜店 · 聽 30 秒音樂後答題 · 每次 -25 體力,答對 +15 克朗",body=>{
+    const d=document.createElement("div");d.className="bubble";
+    d.textContent="店主抱來一疊新到的樂譜:\n\n「幫我個忙!我用音樂盒放一段曲子,你仔細聽 30 秒,然後回答我的問題。答對了,工錢 15 克朗!」\n\n🎵 曲目:"+W.piece;
+    body.appendChild(d);
+    const start=document.createElement("button");
+    start.textContent="▶ 開始聆聽(30 秒,-25 體力)";
+    start.onclick=()=>{
+      if(S.energy<25){
+        log("😪 體力不足 25,無法打工……回 🏠 工作室睡一覺吧。");
+        muse("體力不足!回工作室睡覺就能滿血復活喔~");
+        closeModal();return;
+      }
+      S.energy-=25;refresh();
+      $("mRole").textContent="🎵 正在播放:"+W.piece+" · ⚡ 體力 "+S.energy+"/"+MAXE;
+      body.innerHTML="";
+      const lb=document.createElement("div");lb.className="listenbox";
+      lb.innerHTML='<span class="disc playing">🎶</span><div class="timetxt" id="wqTime">仔細聆聽中…… 30 秒</div><div class="timebar"><div id="wqBar"></div></div><div style="font-size:.68rem;opacity:.7;margin-top:8px">(音樂盒風格合成音色,示意原曲旋律)</div>';
+      body.appendChild(lb);
+      const memo=document.createElement("div");memo.className="bubble";
+      memo.textContent="👂 聆聽重點:注意旋律與伴奏的關係、力度的變化、樂句一問一答的呼應……待會兒就考你!";
+      body.appendChild(memo);
+      startMusic(W.melody,W.unit,30,
+        (ratio,remain)=>{
+          const bar=$("wqBar"),tt=$("wqTime");
+          if(bar)bar.style.width=(ratio*100)+"%";
+          if(tt)tt.textContent="仔細聆聽中…… "+Math.ceil(remain)+" 秒";
+        },
+        ()=>showWorkQuestion(body,W)
+      );
+    };
+    body.appendChild(start);
+    const back=document.createElement("button");back.textContent="↩ 離開";back.className="ghost";back.style.marginLeft="8px";
+    back.onclick=closeModal;body.appendChild(back);
+  });
+}
+function showWorkQuestion(body,W){
+  $("mRole").textContent="🎶 樂譜店 · 答對 +15 克朗";
+  body.innerHTML="";
+  const q=document.createElement("div");q.className="bubble";
+  q.textContent="🎵 音樂停了。店主敲敲櫃檯:\n\n❓ "+W.q;
+  body.appendChild(q);
+  const order=W.opts.map((_,i)=>i).sort(()=>Math.random()-.5);
+  const c=document.createElement("div");c.className="choices";
+  order.forEach((oi,idx)=>{
+    const btn=document.createElement("button");
+    btn.textContent=String.fromCharCode(65+idx)+". "+W.opts[oi];
+    btn.onclick=()=>{
+      body.innerHTML="";
+      const fb=document.createElement("div");fb.className="bubble";
+      if(oi===W.ans){
+        S.gold+=15;S.know+=1;refresh();
+        fb.classList.add("good");
+        fb.textContent="✅ 答對了!店主笑著把 15 克朗放到你手心。\n\n💡 "+W.tip+"\n\n(克朗 +15、樂識 +1)";
+        log("🎧 聆聽測驗答對!"+W.piece+"——"+W.tip+"(+15 克朗)");
+        muse("耳朵越來越靈了!"+W.tip);
+      }else{
+        fb.classList.add("bad");
+        fb.textContent="❌ 答錯了……店主搖搖頭:「再多聽幾遍吧。」\n\n正確答案:"+W.opts[W.ans]+"\n\n💡 "+W.tip;
+        log("❌ 聆聽測驗答錯……正確答案:"+W.opts[W.ans]);
+        muse("別氣餒!"+W.tip);
+      }
+      S.workIdx++;
+      body.appendChild(fb);
+      const row=document.createElement("div");row.className="choices";
+      const next=document.createElement("button");
+      next.textContent=S.energy>=25?"🎧 再聽下一曲(-25 體力)":"😪 體力不足,無法再打工";
+      next.onclick=()=>{closeModal();tick();if(S.energy>=25){openLocById("shop",true);}};
+      row.appendChild(next);
+      const leave=document.createElement("button");leave.textContent="↩ 收工離開";
+      leave.onclick=()=>{closeModal();tick();};
+      row.appendChild(leave);
+      body.appendChild(row);
+    };
+    c.appendChild(btn);
+  });
+  body.appendChild(c);
+}
+function openLocById(id,workDirect){
+  const b=BUILDINGS.find(x=>x.id===id);
+  if(!b)return;
+  if(workDirect){shopWork();}else{openLoc(b);}
+}
+
+/* ══════════ 🎁 樂譜店:購買《快樂頌》 ══════════ */
+function buyOde(){
+  if(S.pages[1]){
+    log("🎶 店主:「海頓大人的那頁手稿你不是已經拿到了嗎?這譜就留給下一位有緣人吧。」");
+    closeModal();return;
+  }
+  if(S.odeScore){
+    log("🎁 你已經買過《快樂頌》樂譜了,快拿去海頓府第吧!");
+    muse("樂譜在你手上!去 🎻 海頓府第找海頓先生交換第二頁手稿~");
+    closeModal();return;
+  }
+  if(S.gold<100){
+    log("💸 店主搖搖頭:「《快樂頌》樂譜要 100 克朗,一分都不能少。」(目前 "+S.gold+" 克朗)");
+    muse("還差 "+(100-S.gold)+" 克朗!可以在 🎧 樂譜店打工聽音答題(答對 +15)、🏠 抄譜(+12)或 🕯️ 沙龍演奏(+10)賺錢。");
+    closeModal();return;
+  }
+  S.gold-=100;S.odeScore=true;refresh();
+  openModal("🎁 珍貴的樂譜到手!","🎶 樂譜店",b=>{
+    const d=document.createElement("div");d.className="bubble good";
+    d.textContent="店主小心翼翼地取出一份用絲帶綁好的樂譜:\n\n「《快樂頌》——這旋律簡潔卻震撼人心,像全人類在一起歌唱。收好了,聽說海頓大人一直想要這一份。」\n\n💰 -100 克朗\n🎁 獲得《快樂頌》樂譜!";
+    b.appendChild(d);
+    const ok=document.createElement("button");ok.textContent="🎻 收好樂譜,前往海頓府第!";
+    ok.onclick=closeModal;b.appendChild(ok);
+  });
+  log("🎁 花費 100 克朗購得《快樂頌》樂譜!快拿去 🎻 海頓府第交換第二頁手稿。");
+  muse("拿到《快樂頌》了!去海頓府第按「尋找樂譜頁」,就能換到第二缺頁~");
+}
+
+/* ══════════ 🎻 海頓府第:以《快樂頌》換第二頁 ══════════ */
+function haydnPage(){
+  if(S.pages[1]){log("📜 這一頁你已經找回了。");closeModal();return;}
+  if(!S.pages[0]){
+    log("🤔 海頓疑惑地看著你:「手稿?什麼手稿?」……先去 ☕ 中央咖啡館答題,取得第一條線索吧!");
+    muse("先在咖啡館答對 8 題、拿到第一條線索,劇情才會展開喔!");
+    closeModal();return;
+  }
+  if(!S.odeScore){
+    openModal("📜 失落的手稿 · 第 2 頁","🎻 海頓府第",b=>{
+      const d=document.createElement("div");d.className="bubble";
+      d.textContent="海頓從書房的抽屜裡,取出一頁樂譜——正是《費加洛的婚禮》的第二缺頁!\n\n「這頁手稿確實在我這裡,是沃夫岡上次來訪時落下的。不過……」\n\n他捋了捋假髮,眼中閃過一絲期待:\n\n「我聽說樂譜店收到了一份《快樂頌》的樂譜,那旋律讓我魂牽夢縈。如果你能把它帶來給我,我就把這頁手稿交給你。老頭子就這麼點心願,拜託了。」";
+      b.appendChild(d);
+      const hint=document.createElement("div");hint.className="bubble";
+      hint.textContent="💡 線索:去 🎶 樂譜店購買《快樂頌》樂譜(需要 100 克朗),再回來找海頓先生。";
+      b.appendChild(hint);
+      const ok=document.createElement("button");ok.textContent="🎶 我這就去樂譜店!";
+      ok.onclick=closeModal;b.appendChild(ok);
+    });
+    log("🎻 海頓:「把《快樂頌》的樂譜帶來給我,第二頁手稿就是你的。」(樂譜店有售,100 克朗)");
+    muse("海頓想要《快樂頌》!去 🎶 樂譜店花 100 克朗買下它,再回來交換~");
+    return;
+  }
+  S.odeScore=false;S.pages[1]=true;S.rep+=1;S.know+=2;refresh();
+  openModal("🎼 第二頁手稿到手!","🎻 海頓府第",b=>{
+    const d=document.createElement("div");d.className="bubble good";
+    d.textContent="你雙手奉上《快樂頌》的樂譜。海頓接過,指尖輕輕撫過音符,眼眶竟有些濕潤:\n\n「Freude……歡樂……多麼純粹的旋律啊。簡潔,卻像千萬人在同聲歌唱。」\n\n他鄭重地把《費加洛》的手稿放到你手中:\n\n「一諾千金。替我謝謝沃夫岡,也謝謝你,"+S.name+"。」\n\n🎼 獲得手稿第 2 頁!(聲望 +1、樂識 +2)";
+    b.appendChild(d);
+    const ok=document.createElement("button");ok.textContent="🎉 太好了!繼續尋找其他手稿";
+    ok.onclick=closeModal;b.appendChild(ok);
+  });
+  log("🎼 用《快樂頌》樂譜換得《費加洛婚禮》手稿第 2 頁!(聲望 +1、樂識 +2)");
+  muse(S.pages.every(p=>p)?"五頁都齊了!快去 🏛️ 城堡劇院參加首演!!":"還差 "+S.pages.filter(p=>!p).length+" 頁,加油!");
+}
+
+/* ══════════ 🎤 公開演奏:高音譜號認音 ══════════ */
+const PERF_NOTES=[
+  {l:"C",y:70,ledger:[70],d:"下加一線"},
+  {l:"D",y:65,d:"下加一線與第一線之間"},
+  {l:"E",y:60,d:"第一線"},
+  {l:"F",y:55,d:"第一間"},
+  {l:"G",y:50,d:"第二線(高音譜號纏繞的那條線!)"},
+  {l:"A",y:45,d:"第二間"},
+  {l:"B",y:40,d:"第三線"},
+  {l:"C",y:35,d:"第三間"},
+  {l:"D",y:30,d:"第四線"},
+  {l:"E",y:25,d:"第四間"},
+  {l:"F",y:20,d:"第五線"},
+  {l:"G",y:15,d:"第五線之上的空間"},
+  {l:"A",y:10,ledger:[10],d:"上加一線"}
+];
+const SOLF={C:"Do",D:"Re",E:"Mi",F:"Fa",G:"Sol",A:"La",B:"Si"};
+const LETTERS=["C","D","E","F","G","A","B"];
+
+function noteSVG(note){
+  const y=note.y;
+  let s='<svg viewBox="0 0 200 92" xmlns="http://www.w3.org/2000/svg">';
+  for(let ly=20;ly<=60;ly+=10)
+    s+='<line x1="26" y1="'+ly+'" x2="184" y2="'+ly+'" stroke="#6d4c2b" stroke-width="1.6"/>';
+  s+='<text x="30" y="66" font-size="58" fill="#5c4326" font-family="serif">&#119070;</text>';
+  (note.ledger||[]).forEach(ly=>{
+    s+='<line x1="106" y1="'+ly+'" x2="134" y2="'+ly+'" stroke="#6d4c2b" stroke-width="1.6"/>';
+  });
+  s+='<ellipse cx="120" cy="'+y+'" rx="7.5" ry="5.4" fill="#3d2c18" transform="rotate(-14 120 '+y+')"/>';
+  if(y>=40) s+='<line x1="127" y1="'+y+'" x2="127" y2="'+(y-30)+'" stroke="#3d2c18" stroke-width="2"/>';
+  else      s+='<line x1="113" y1="'+y+'" x2="113" y2="'+(y+30)+'" stroke="#3d2c18" stroke-width="2"/>';
+  s+='</svg>';
+  return s;
+}
+
+function performShow(){
+  openModal("🎤 公開演奏 · 高音譜號認音","觀眾點歌考驗你!每次演奏 -10 體力,答對 +1 聲望,答錯再 -5 體力",body=>{
+    nextPerf(body);
+  });
+}
+function nextPerf(body){
+  if(S.energy<10){
+    body.innerHTML="";
+    const d=document.createElement("div");d.className="bubble";
+    d.textContent="😪 你的手指已經抬不起來了……(體力不足 10)\n\n觀眾們善意地鼓掌:「今天就到這裡吧,回去好好休息!」";
+    body.appendChild(d);
+    const btn=document.createElement("button");btn.textContent="↩ 謝幕離場";
+    btn.onclick=closeModal;body.appendChild(btn);
+    muse("體力不足!回工作室睡一覺,明天再開演奏會吧~");
+    return;
+  }
+  S.energy-=10;refresh();
+
+  const note=PERF_NOTES[Math.floor(Math.random()*PERF_NOTES.length)];
+  const opts=[note.l];
+  while(opts.length<3){
+    const c=LETTERS[Math.floor(Math.random()*LETTERS.length)];
+    if(!opts.includes(c))opts.push(c);
+  }
+  opts.sort(()=>Math.random()-.5);
+
+  $("mRole").textContent="⚡ 體力 "+S.energy+"/"+MAXE+" · ⭐ 聲望 "+S.rep+" · 答對 +1 聲望,答錯再 -5 體力";
+  body.innerHTML="";
+  const q=document.createElement("div");q.className="bubble";
+  q.textContent="🎻 街坊觀眾聚集在你的工作室窗前。有人指著譜架喊:\n\n「演奏這個音給我們聽!它是哪個音?」";
+  body.appendChild(q);
+  const st=document.createElement("div");st.className="staffbox";st.innerHTML=noteSVG(note);
+  body.appendChild(st);
+  const c=document.createElement("div");c.className="choices";
+  opts.forEach(o=>{
+    const btn=document.createElement("button");
+    btn.textContent=o+"("+SOLF[o]+")";
+    btn.onclick=()=>{
+      body.innerHTML="";
+      const fb=document.createElement("div");fb.className="bubble";
+      if(o===note.l){
+        S.rep+=1;refresh();
+        fb.classList.add("good");
+        fb.textContent="✅ 答對了!你流暢地奏出 "+note.l+"("+SOLF[note.l]+"),觀眾報以熱烈掌聲!\n\n💡 這個音在高音譜號的「"+note.d+"」。\n\n(聲望 +1,目前聲望 "+S.rep+")";
+        log("🎤 公開演奏成功!"+note.l+"("+SOLF[note.l]+")位於"+note.d+"。(聲望 +1)");
+        muse(S.rep>=10?"聲望達到 10 了!海頓府第的大門為你敞開,快去拿第二頁手稿吧!":"聲望 "+S.rep+"/10,繼續演奏累積名氣,就能進入 🎻 海頓府第!");
+      }else{
+        S.energy=Math.max(0,S.energy-5);refresh();
+        fb.classList.add("bad");
+        fb.textContent="❌ 彈錯音了!觀眾發出善意的笑聲……\n\n正確答案:"+note.l+"("+SOLF[note.l]+")—— 它在高音譜號的「"+note.d+"」。\n\n(額外 -5 體力,剩餘 "+S.energy+")";
+        log("❌ 演奏失誤……那個音是 "+note.l+"("+SOLF[note.l]+"),位於"+note.d+"。(-5 體力)");
+        muse("記住:高音譜號由下往上,線是 E-G-B-D-F,間是 F-A-C-E!");
+      }
+      body.appendChild(fb);
+      const row=document.createElement("div");row.className="choices";
+      const next=document.createElement("button");
+      next.textContent=S.energy>=10?"🎼 再演奏一曲(-10 體力)":"😪 體力不足,無法再演奏";
+      next.onclick=()=>nextPerf(body);
+      row.appendChild(next);
+      const leave=document.createElement("button");leave.textContent="↩ 謝幕離場";
+      leave.onclick=()=>{closeModal();tick();};
+      row.appendChild(leave);
+      body.appendChild(row);
+    };
+    c.appendChild(btn);
+  });
+  body.appendChild(c);
+  const memo=document.createElement("div");memo.style.cssText="font-size:.72rem;color:#a28a68;margin-top:10px;";
+  memo.textContent="💡 口訣:五條線由下而上是 E-G-B-D-F(Every Good Boy Does Fine),四個間是 F-A-C-E。";
+  body.appendChild(memo);
+  const leave=document.createElement("button");leave.textContent="↩ 離開";leave.className="ghost";leave.style.marginTop="10px";
+  leave.onclick=()=>{closeModal();tick();};body.appendChild(leave);
+}
+
+/* ══════════ ☕ 咖啡館:連續答題模式 ══════════ */
+function cafeQuiz(){
+  openModal("🎓 古典樂識問答","連續答題 · 每題消耗 5 體力(答錯也扣)",body=>{
+    nextCafeQ(body);
+  });
+}
+function nextCafeQ(body){
+  if(S.energy<5){
+    body.innerHTML="";
+    const d=document.createElement("div");d.className="bubble";
+    d.textContent="😪 你的體力不足 5,咖啡也救不了你了……\n\n老闆:「年輕人,回家睡一覺,明天再來吧!」";
+    body.appendChild(d);
+    const btn=document.createElement("button");btn.textContent="↩ 離開咖啡館";
+    btn.onclick=closeModal;body.appendChild(btn);
+    muse("體力不足!回 🏠 工作室睡覺就能滿血復活喔~");
+    return;
+  }
+  S.energy-=5;refresh();
+
+  const fresh=CAFE_QUIZ.map((_,i)=>i).filter(i=>!S.cafeDone[i]);
+  const pool=fresh.length?fresh:CAFE_QUIZ.map((_,i)=>i);
+  const idx=pool[Math.floor(Math.random()*pool.length)];
+  const Q=CAFE_QUIZ[idx];
+
+  $("mRole").textContent="已答對 "+Math.min(S.cafeCorrect,8)+"/8 題 · ⚡ 體力 "+S.energy+"/"+MAXE+" · 每題 -5 體力(答錯也扣)";
+  body.innerHTML="";
+  const q=document.createElement("div");q.className="bubble";
+  q.textContent="咖啡館的常客們圍過來,出題考考你:\n\n❓ "+Q.q;body.appendChild(q);
+  const c=document.createElement("div");c.className="choices";
+  Q.opts.forEach((o,i)=>{
+    const btn=document.createElement("button");btn.textContent=String.fromCharCode(65+i)+". "+o;
+    btn.onclick=()=>{
+      body.innerHTML="";
+      const fb=document.createElement("div");fb.className="bubble";
+      if(i===Q.ans){
+        if(!S.cafeDone[idx]){S.cafeDone[idx]=true;S.cafeCorrect++;}
+        S.know+=1;refresh();
+        fb.classList.add("good");
+        fb.textContent="✅ 答對了!\n\n💡 "+Q.tip+"\n\n(樂識 +1,累計答對 "+Math.min(S.cafeCorrect,8)+"/8)";
+        log("✅ 咖啡館答對!"+Q.tip+"(累計 "+Math.min(S.cafeCorrect,8)+"/8)");
+        if(S.cafeCorrect>=8&&!S.pages[0]){
+          S.pages[0]=true;S.rep+=1;refresh();
+          closeModal();
+          openModal("📜 第一條線索!","☕ 中央咖啡館",bb=>{
+            const d=document.createElement("div");d.className="bubble";
+            d.textContent="咖啡館老闆聽完你的回答,忍不住鼓掌:\n\n「年輕人,你對古典音樂的了解真不簡單!對了……前幾天有位客人,竟拿一頁樂譜來墊咖啡杯,我看著心疼就收了起來——你瞧瞧,是不是莫札特先生在找的?」\n\n他從櫃檯下取出一頁染著咖啡漬的譜紙——正是《費加洛的婚禮》手稿!\n\n🎼 獲得手稿第 1 頁!(聲望 +1)\n\n老闆補充:「這是第一頁樂譜手稿,聽說其餘幾頁,散落在莫札特宅邸、海頓府第、樂譜店和貴族沙龍。這就是你的下一步線索了!\n\n(提示:聲望達 10,才可以進入海頓府第拿第二條線索。去 🏠 工作室辦公開演奏,就能累積聲望!)」";
+            bb.appendChild(d);
+            const ok=document.createElement("button");ok.textContent="🎉 太好了!繼續尋找其他手稿";
+            ok.onclick=closeModal;bb.appendChild(ok);
+          });
+          log("🎼 獲得《費加洛婚禮》手稿第 1 頁!其餘散落在:🎩 莫札特宅邸、🎻 海頓府第(需聲望 10)、🎶 樂譜店、🕯️ 貴族沙龍。");
+          muse("第一條線索到手!先去 🏠 工作室公開演奏,把聲望練到 10,才能進入海頓府第喔!");
+          return;
+        }
+        if(!S.pages[0]) muse("好厲害!再答對 "+(8-S.cafeCorrect)+" 題,老闆就會告訴你手稿的線索!");
+        else muse(Q.tip);
+      }else{
+        fb.classList.add("bad");
+        fb.textContent="❌ 答錯了……\n\n正確答案:"+Q.opts[Q.ans]+"\n\n💡 "+Q.tip;
+        log("❌ 咖啡館答錯……正確答案:"+Q.opts[Q.ans]);
+        muse("別氣餒!"+Q.tip);
+      }
+      body.appendChild(fb);
+      const row=document.createElement("div");row.className="choices";
+      const next=document.createElement("button");
+      next.textContent=S.energy>=5?"➡️ 下一題(-5 體力)":"😪 體力不足,無法再答題";
+      next.onclick=()=>nextCafeQ(body);
+      row.appendChild(next);
+      const leave=document.createElement("button");leave.textContent="↩ 喝口咖啡,先休息(離開)";
+      leave.onclick=closeModal;row.appendChild(leave);
+      body.appendChild(row);
+    };
+    c.appendChild(btn);
+  });
+  body.appendChild(c);
+  const more=document.createElement("div");more.style.cssText="font-size:.72rem;color:#a28a68;margin-top:10px;";
+  more.textContent="💡 每題進場即扣 5 體力,答錯不退還;答對過的題目不重複計分,答錯可再挑戰。";
+  body.appendChild(more);
+  const leave=document.createElement("button");leave.textContent="↩ 離開";leave.className="ghost";leave.style.marginTop="10px";
+  leave.onclick=closeModal;body.appendChild(leave);
+}
+
+/* ══════════ 一般問答 ══════════ */
+function pickQuiz(keys){
+  const fresh=keys.filter(k=>!S.quizDone[k]);
+  const pool=fresh.length?fresh:keys;
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+function quiz(keys,goldR,repR,cost){
+  if(!useEnergy(cost||10))return;
+  const k=pickQuiz(keys);const QQ=QUIZ[k];
+  openModal("🎵 音樂問答","答對可獲得克朗、聲望與樂識!",b=>{
+    const q=document.createElement("div");q.className="bubble";q.textContent=QQ.q;b.appendChild(q);
+    const c=document.createElement("div");c.className="choices";
+    QQ.opts.forEach((o,i)=>{
+      const btn=document.createElement("button");btn.textContent=String.fromCharCode(65+i)+". "+o;
+      btn.onclick=()=>{
+        if(i===QQ.ans){
+          S.quizDone[k]=true;S.gold+=goldR;S.rep+=repR;S.know+=1;
+          log("✅ 答對!"+QQ.tip+"(克朗 +"+goldR+"、聲望 +"+repR+"、樂識 +1)");
+          muse("答對了!"+QQ.tip);
+        }else{
+          log("❌ 答錯了……正確答案:"+QQ.opts[QQ.ans]);
+          muse("別氣餒!提示:"+QQ.tip);
+        }
+        closeModal();tick();
+      };
+      c.appendChild(btn);
+    });
+    b.appendChild(c);
+  });
+}
+
+/* ══════════ 樂譜頁任務(通用) ══════════ */
+function pageQuest(idx,quizKey,intro){
+  if(S.pages[idx]){log("📜 這一頁你已經找回了。");closeModal();return;}
+  if(!S.pages[0]){
+    log("🤔 對方似乎不信任陌生人……先去 ☕ 中央咖啡館答題,取得第一條線索吧!");
+    muse("先在咖啡館答對 8 題、拿到第一條線索,大家才會信任你喔!");
+    closeModal();return;
+  }
+  if(!useEnergy(10))return;
+  const Q=QUIZ[quizKey];
+  openModal("📜 失落的手稿 · 第 "+(idx+1)+" 頁","主線任務",b=>{
+    const s=document.createElement("div");s.className="bubble";s.textContent=intro;b.appendChild(s);
+    const q=document.createElement("div");q.className="bubble";q.textContent="❓ "+Q.q;b.appendChild(q);
+    const c=document.createElement("div");c.className="choices";
+    Q.opts.forEach((o,i)=>{
+      const btn=document.createElement("button");btn.textContent=String.fromCharCode(65+i)+". "+o;
+      btn.onclick=()=>{
+        if(i===Q.ans){
+          S.pages[idx]=true;S.know+=2;S.rep+=1;
+          log("🎼 找回《費加洛婚禮》手稿第 "+(idx+1)+" 頁!("+Q.tip+")");
+          muse(S.pages.every(p=>p)?"五頁都齊了!快去 🏛️ 城堡劇院參加首演!!":"還差 "+S.pages.filter(p=>!p).length+" 頁,加油!");
+        }else{
+          log("❌ 答錯了,對方把樂譜收了回去……(提示:"+Q.tip+")");
+          muse("提示:"+Q.tip+" 記住之後再來一次!");
+        }
+        closeModal();tick();
+      };
+      c.appendChild(btn);
+    });
+    b.appendChild(c);
+  });
+}
+
+/* ══════════ AI 對話 ══════════ */
+function chat(id){
+  const N=NPC[id];
+  openModal("💬 "+N.name,N.role,b=>{
+    const box=document.createElement("div");
+    const first=document.createElement("div");first.className="bubble";
+    first.textContent=typeof N.hello==="function"?N.hello():N.hello;
+    box.appendChild(first);b.appendChild(box);
+    const row=document.createElement("div");row.className="chatrow";
+    const inp=document.createElement("input");inp.placeholder="輸入話題……(如:歌劇、交響曲、快樂頌)";
+    const send=document.createElement("button");send.textContent="送出";
+    const reply=()=>{
+      const t=inp.value.trim();if(!t)return;
+      const me=document.createElement("div");me.className="bubble me";me.textContent=t;box.appendChild(me);
+      let ans=N.fallback;
+      for(const [re,r] of N.rules){if(re.test(t)){ans=r;break;}}
+      const bb=document.createElement("div");bb.className="bubble";bb.textContent=ans;box.appendChild(bb);
+      inp.value="";bb.scrollIntoView({behavior:"smooth"});
+    };
+    send.onclick=reply;inp.addEventListener("keydown",e=>{if(e.key==="Enter")reply();});
+    row.appendChild(inp);row.appendChild(send);b.appendChild(row);
+    const close=document.createElement("button");close.textContent="↩ 結束交談";close.className="ghost";close.style.marginTop="10px";
+    close.onclick=closeModal;b.appendChild(close);
+  });
+}
+
+/* ══════════ 結局 ══════════ */
+function finale(){
+  if(S.ended){log("🎭 首演已圓滿落幕,你可以繼續自由探索。");closeModal();return;}
+  S.ended=true;S.rep+=5;S.gold+=50;
+  openModal("🎉 《費加洛婚禮》首演之夜","1786 年 5 月 1 日 · 城堡劇院",b=>{
+    const d=document.createElement("div");d.className="bubble";
+    d.textContent="幕啟。序曲如香檳般奔湧而出,你找回的五頁手稿在譜架上閃閃發光。\n\n莫札特在指揮席上回頭,對你眨了眨眼:「"+S.name+",謝謝你——無論你來自哪裡。」\n\n終場掌聲如雷。海頓爸爸拍拍你的肩:「孩子,維也納會記住今晚——也會記住你。」\n\n那頁把你帶來的樂譜,在你懷中微微發光……回家的路,似乎已經打開。\n\n🏆 冒險成果\n🎓 冒險者:"+S.name+"\n📅 用時:"+S.day+" 天\n📖 樂識:"+S.know+"\n⭐ 聲望:"+S.rep+"\n💰 克朗:"+S.gold+"\n\n🎼 恭喜通關!";
+    b.appendChild(d);
+    const btn=document.createElement("button");btn.textContent="🌟 繼續我的維也納生活";btn.onclick=closeModal;
+    b.appendChild(btn);
+  });
+  log("🏆 《費加洛婚禮》首演大成功!(聲望 +5、克朗 +50)");
+}
+
+/* ══════════════════════════════════════
+   RPG 地圖引擎:按住滑鼠走路
+══════════════════════════════════════ */
+const cv=$("game"),ctx=cv.getContext("2d");
+const player={x:180,y:230,dir:1,walking:false};
+const SPEED=2.6;
+let held=false,target={x:player.x,y:player.y},zoneLock=null,t0=0;
+
+function setTarget(e){
+  const r=cv.getBoundingClientRect();
+  target.x=(e.clientX-r.left)*(cv.width/r.width);
+  target.y=(e.clientY-r.top)*(cv.height/r.height);
+}
+cv.addEventListener("pointerdown",e=>{held=true;setTarget(e);cv.setPointerCapture(e.pointerId);});
+cv.addEventListener("pointermove",e=>{if(held)setTarget(e);});
+cv.addEventListener("pointerup",()=>held=false);
+cv.addEventListener("pointercancel",()=>held=false);
+
+function solid(px,py){
+  if(px<14||px>cv.width-14||py<14||py>cv.height-8)return true;
+  for(const b of BUILDINGS){
+    if(px>b.x-10&&px<b.x+b.w+10&&py>b.y-6&&py<b.y+b.h-4)return true;
+  }
+  const dx=px-480,dy=py-330;
+  if(dx*dx+dy*dy<48*48)return true;
+  return false;
+}
+
+function update(){
+  player.walking=false;
+  const introOn=document.getElementById("intro").style.display!=="none";
+  const welcomeOn=document.getElementById("welcome").classList.contains("show");
+  if(held&&!$("overlay").classList.contains("show")&&!introOn&&!welcomeOn){
+    const dx=target.x-player.x,dy=target.y-player.y;
+    const d=Math.hypot(dx,dy);
+    if(d>6){
+      const nx=player.x+dx/d*SPEED,ny=player.y+dy/d*SPEED;
+      if(!solid(nx,player.y))player.x=nx;
+      if(!solid(player.x,ny))player.y=ny;
+      player.dir=dx<0?-1:1;
+      player.walking=true;
+    }
+  }
+  let inZone=null;
+  for(const b of BUILDINGS){
+    const d=b.door;
+    if(player.x>d.x&&player.x<d.x+d.w&&player.y>d.y&&player.y<d.y+d.h){inZone=b;break;}
+  }
+  if(inZone&&!introOn&&!welcomeOn){
+    if(zoneLock!==inZone.id){
+      zoneLock=inZone.id;held=false;
+      if(inZone.lock&&inZone.lock()){
+        log("🔒 "+inZone.name+":"+inZone.lockMsg);
+        muse(inZone.id==="haydn"?"海頓府第的門房不認識你……去 🏠 工作室公開演奏,把聲望練到 10(目前 "+S.rep+")!":inZone.lockMsg);
+      }else{
+        openLoc(inZone);
+      }
+    }
+  }else if(!inZone)zoneLock=null;
+}
+
+/* ══════════ 繪圖 ══════════ */
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+function drawMap(){
+  ctx.fillStyle="#87a96b";ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle="#cdb896";
+  ctx.fillRect(0,215,cv.width,80);
+  ctx.fillRect(0,430,cv.width,60);
+  ctx.fillRect(280,0,70,cv.height);
+  ctx.fillRect(620,0,70,cv.height);
+  ctx.fillStyle="#d6c3a1";ctx.beginPath();ctx.arc(480,330,95,0,7);ctx.fill();
+  ctx.strokeStyle="rgba(120,100,70,.18)";ctx.lineWidth=1;
+  for(let i=0;i<40;i++){const x=(i*137)%960,y=(i*211)%620;
+    ctx.strokeRect(x,y,22,10);}
+  ctx.fillStyle="#8fb6c9";ctx.beginPath();ctx.arc(480,330,42,0,7);ctx.fill();
+  ctx.strokeStyle="#6a8a99";ctx.lineWidth=4;ctx.stroke();
+  ctx.fillStyle="#c9dde8";ctx.beginPath();ctx.arc(480,330,20,0,7);ctx.fill();
+  const bob=Math.sin(t0/300)*3;
+  ctx.font="20px serif";ctx.textAlign="center";
+  ctx.fillText("⛲",480,320+bob);
+  ctx.font="26px serif";
+  [[30,420],[240,180],[930,250],[380,600],[900,610],[30,610],[590,40],[240,40]].forEach(p=>ctx.fillText("🌳",p[0],p[1]));
+
+  BUILDINGS.forEach(b=>{
+    const locked=b.lock&&b.lock();
+    ctx.fillStyle=locked?"#a09a8c":b.wall;
+    roundRect(b.x,b.y+22,b.w,b.h-22,6);ctx.fill();
+    ctx.strokeStyle="rgba(80,55,30,.4)";ctx.lineWidth=2;ctx.stroke();
+    ctx.fillStyle=locked?"#6d685e":b.roof;
+    ctx.beginPath();
+    ctx.moveTo(b.x-10,b.y+26);ctx.lineTo(b.x+b.w/2,b.y-8);ctx.lineTo(b.x+b.w+10,b.y+26);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle=S.slot>=3?"#ffd97a":"#e8f1f5";
+    ctx.fillRect(b.x+16,b.y+44,24,22);ctx.fillRect(b.x+b.w-40,b.y+44,24,22);
+    ctx.strokeStyle="rgba(80,55,30,.5)";ctx.lineWidth=1.5;
+    ctx.strokeRect(b.x+16,b.y+44,24,22);ctx.strokeRect(b.x+b.w-40,b.y+44,24,22);
+    ctx.fillStyle="#5c4326";
+    ctx.fillRect(b.x+b.w/2-14,b.y+b.h-34,28,34);
+    ctx.fillStyle="#c9a06a";ctx.beginPath();ctx.arc(b.x+b.w/2+8,b.y+b.h-17,2.5,0,7);ctx.fill();
+    ctx.fillStyle="rgba(255,220,140,.35)";
+    roundRect(b.door.x,b.door.y,b.door.w,b.door.h,8);ctx.fill();
+    ctx.font="24px serif";ctx.textAlign="center";
+    ctx.fillText(locked?"🔒":b.icon,b.x+b.w/2,b.y+18);
+    ctx.font="bold 13px Georgia, 'Noto Serif TC', serif";
+    ctx.fillStyle="#3d2c18";
+    ctx.fillText(b.name,b.x+b.w/2,b.y+b.h+56);
+    const pg=PAGE_AT[b.id];
+    if(pg!==undefined&&!S.pages[pg]&&!locked){
+      ctx.font="18px serif";
+      ctx.fillText("📜",b.x+b.w-18,b.y-14+Math.sin(t0/250+b.x)*4);
+    }
+    if(b.id==="haydn"&&S.rep<10){
+      ctx.font="bold 11px Georgia, 'Noto Serif TC', serif";
+      ctx.fillStyle="#7a3b2b";
+      ctx.fillText("⭐需聲望10(現"+S.rep+")",b.x+b.w/2,b.y-24);
+      ctx.fillStyle="#3d2c18";
+    }
+    if(b.id==="shop"&&S.pages[0]&&!S.pages[1]&&!S.odeScore){
+      ctx.font="bold 11px Georgia, 'Noto Serif TC', serif";
+      ctx.fillStyle="#5c4a8a";
+      ctx.fillText("🎁《快樂頌》100克朗",b.x+b.w/2,b.y-24);
+      ctx.fillStyle="#3d2c18";
+    }
+    if(b.id==="opera"&&!locked&&!S.ended){
+      ctx.font="20px serif";
+      ctx.fillText("❗",b.x+b.w/2,b.y-20+Math.sin(t0/200)*5);
+    }
+  });
+}
+
+function drawPlayer(){
+  const p=player,w=p.walking;
+  const bob=w?Math.sin(t0/80)*2:0;
+  const leg=w?Math.sin(t0/80)*5:0;
+  ctx.save();
+  ctx.translate(p.x,p.y+bob);
+  ctx.scale(p.dir,1);
+  ctx.fillStyle="rgba(0,0,0,.2)";
+  ctx.beginPath();ctx.ellipse(0,14-bob,11,4,0,0,7);ctx.fill();
+  ctx.strokeStyle="#4a3222";ctx.lineWidth=4;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(-3,2);ctx.lineTo(-3+leg,13);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(3,2);ctx.lineTo(3-leg,13);ctx.stroke();
+  ctx.fillStyle="#7a3b3b";
+  roundRect(-9,-14,18,18,5);ctx.fill();
+  ctx.fillStyle="#f5efe0";ctx.beginPath();ctx.arc(0,-12,4,0,7);ctx.fill();
+  ctx.fillStyle="#f0cfa8";ctx.beginPath();ctx.arc(0,-22,8,0,7);ctx.fill();
+  ctx.fillStyle="#efe8dc";
+  ctx.beginPath();ctx.arc(-2,-26,7,Math.PI*.9,Math.PI*1.95);ctx.fill();
+  ctx.beginPath();ctx.arc(-8,-20,3.5,0,7);ctx.fill();
+  ctx.fillStyle="#3d2c18";ctx.beginPath();ctx.arc(3,-23,1.4,0,7);ctx.fill();
+  ctx.fillStyle="#fffaf0";ctx.fillRect(4,-10,9,11);
+  ctx.strokeStyle="#8a7358";ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(5,-7);ctx.lineTo(12,-7);ctx.moveTo(5,-4);ctx.lineTo(12,-4);ctx.moveTo(5,-1);ctx.lineTo(12,-1);ctx.stroke();
+  ctx.restore();
+
+  if(S.name){
+    ctx.font="bold 11px Georgia, 'Noto Serif TC', serif";
+    ctx.fillStyle="rgba(50,35,20,.75)";ctx.textAlign="center";
+    ctx.fillText(S.name,p.x,p.y-38);
+  }
+
+  if(held){
+    ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=2;
+    const r=8+Math.sin(t0/120)*3;
+    ctx.beginPath();ctx.arc(target.x,target.y,r,0,7);ctx.stroke();
+  }
+  if(w&&Math.floor(t0/300)%2===0){
+    ctx.font="13px serif";ctx.fillStyle="rgba(90,60,120,.5)";
+    ctx.fillText("♪",p.x-p.dir*16,p.y-26+Math.sin(t0/150)*4);
+  }
+}
+
+function drawDayNight(){
+  if(S.slot===3){ctx.fillStyle="rgba(255,140,50,.13)";ctx.fillRect(0,0,cv.width,cv.height);}
+  else if(S.slot===4){ctx.fillStyle="rgba(20,30,80,.32)";ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.font="16px serif";ctx.fillStyle="rgba(255,255,220,.9)";
+    ctx.fillText("🌙",920,30);}
+  else if(S.slot===0){ctx.fillStyle="rgba(255,200,120,.08)";ctx.fillRect(0,0,cv.width,cv.height);}
+}
+
+function loop(t){
+  t0=t;update();
+  drawMap();drawPlayer();drawDayNight();
+  requestAnimationFrame(loop);
+}
+refresh();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
